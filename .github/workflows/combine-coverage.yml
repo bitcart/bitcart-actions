@@ -2,9 +2,6 @@ name: Combine Coverage
 
 on:
   workflow_call:
-    secrets:
-      CODECOV_TOKEN:
-        required: true
 
 jobs:
   run:
