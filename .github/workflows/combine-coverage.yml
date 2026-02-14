@@ -10,8 +10,6 @@ jobs:
   run:
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
-    outputs:
-      python-versions: ${{ steps.discover.outputs.versions }}
 
     steps:
       - uses: actions/checkout@v6
@@ -54,75 +52,44 @@ jobs:
           name: combined-coverage
           path: combined-coverage/
 
-      - name: Discover Python versions
-        id: discover
+      - name: Merge JUnit XML reports per Python version
         run: |
           versions=$(ls -d test-results-all/test-results-py* 2>/dev/null | sed 's|.*/test-results-py||' | sed 's|-[0-9]*$||' | sort -uV)
           min_version=$(echo "$versions" | head -1)
-          json_array=$(echo "$versions" | jq -R -s -c --arg min "$min_version" 'split("\n") | map(select(. != "")) | map({version: ., include_functional: (. == $min)})')
-          echo "versions=$json_array" >> "$GITHUB_OUTPUT"
+          for version in $versions; do
+            pattern="test-results-all/test-results-py${version}-*/junit.xml"
+            if [ "$version" = "$min_version" ]; then
+              pattern="$pattern test-results-all/test-results-functional/junit.xml"
+            fi
+            npx -y junit-report-merger combined-junit-py${version}.xml $pattern
+          done
 
-  # upload-test-results:
-  #   needs: run
-  #   name: upload-test-results-{{ matrix.version }}
-  #   if: ${{ !cancelled() && needs.run.outputs.python-versions != '[]' }}
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       include: ${{ fromJson(needs.run.outputs.python-versions) }}
+      - name: Upload merged JUnit XMLs
+        uses: actions/upload-artifact@v6
+        with:
+          name: junit-combined
+          path: combined-junit-py*.xml
 
-  #   steps:
-  #     - uses: actions/checkout@v6
+      - name: Display test results
+        uses: dorny/test-reporter@v2
+        if: ${{ !cancelled() }}
+        with:
+          name: Test Results
+          path: combined-junit-py*.xml
+          reporter: python-xunit
 
-  #     - name: Download test results
-  #       uses: actions/download-artifact@v7
-  #       with:
-  #         pattern: test-results-*
-  #         path: test-results-all/
+      - name: Upload test results to Codecov
+        uses: bitcart/bitcart-actions/actions/codecov@master
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          upload_test_results: "true"
+          test_results_files: combined-junit-py*.xml
 
-  #     - name: Merge JUnit XML reports
-  #       run: |
-  #         pattern="test-results-all/test-results-py${{ matrix.version }}-*/junit.xml"
-  #         if [ "${{ matrix.include_functional }}" = "true" ]; then
-  #           pattern="$pattern test-results-all/test-results-functional/junit.xml"
-  #         fi
-  #         npx -y junit-report-merger combined-junit-py${{ matrix.version }}.xml $pattern
-
-  #     - name: Upload merged JUnit XML
-  #       uses: actions/upload-artifact@v6
-  #       with:
-  #         name: junit-py${{ matrix.version }}
-  #         path: combined-junit-py${{ matrix.version }}.xml
-
-  #     - name: Display test results
-  #       uses: dorny/test-reporter@v2
-  #       if: ${{ !cancelled() }}
-  #       with:
-  #         name: Test Results (Python ${{ matrix.version }})
-  #         path: combined-junit-py${{ matrix.version }}.xml
-  #         reporter: python-xunit
-
-  #     - name: Upload test results to Codecov
-  #       if: ${{ matrix.include_functional }}
-  #       uses: bitcart/bitcart-actions/actions/codecov@master
-  #       with:
-  #         token: ${{ secrets.CODECOV_TOKEN }}
-  #         upload_test_results: "true"
-  #         test_results_files: combined-junit-py${{ matrix.version }}.xml
-  #         flags: "py${{ matrix.version }}"
-  #         name: "Python ${{ matrix.version }}"
-
-  # cleanup:
-  #   needs: [run, upload-test-results]
-  #   if: ${{ !cancelled() }}
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: Delete intermediate artifacts
-  #       uses: geekyeggo/delete-artifact@v5
-  #       with:
-  #         name: |
-  #           test-results-*
-  #           coverage-*
-  #           coverage-data-*
-  #         failOnError: false
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            test-results-*
+            coverage-*
+            coverage-data-*
+          failOnError: false
