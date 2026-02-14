@@ -18,16 +18,26 @@ inputs:
     description: "Environment variables to include in Codecov report"
     required: false
     default: ""
+  upload_test_results:
+    description: "Upload JUnit XML test results to Codecov instead of coverage"
+    required: false
+    default: "false"
+  test_results_files:
+    description: "JUnit XML file paths to upload (supports globs)"
+    required: false
+    default: "test-results/junit.xml"
 
 runs:
   using: composite
   steps:
     - name: Prepare coverage XML
+      if: ${{ inputs.upload_test_results != 'true' }}
       shell: bash
       run: |
         coverage xml -o test-results/coverage.xml
 
     - name: Upload coverage
+      if: ${{ inputs.upload_test_results != 'true' }}
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.token }}
@@ -38,7 +48,7 @@ runs:
         disable_search: true
 
     - name: Upload test results to Codecov
-      if: ${{ !cancelled() }}
+      if: ${{ inputs.upload_test_results == 'true' }}
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.token }}
@@ -46,5 +56,5 @@ runs:
         flags: ${{ inputs.flags }}
         env_vars: ${{ inputs.env_vars }}
         report_type: test_results
-        files: test-results/junit.xml
+        files: ${{ inputs.test_results_files }}
         disable_search: true
