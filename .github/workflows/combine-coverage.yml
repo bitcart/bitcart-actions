@@ -18,7 +18,7 @@ jobs:
         uses: bitcart/bitcart-actions/actions/setup-python@master
 
       - name: Install dependencies
-        run: uv pip install coverage[toml]
+        run: uv pip install coverage
 
       - name: Download all coverage data artifacts
         uses: actions/download-artifact@v7
@@ -46,44 +46,26 @@ jobs:
           echo "## Coverage Summary" | tee -a "$GITHUB_STEP_SUMMARY"
           cat combined-coverage/summary.md | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Collect JUnit XML files
+        run: |
+          find test-results-all/ -name 'junit.xml' | while read f; do
+            dir=$(basename "$(dirname "$f")")
+            cp "$f" "combined-coverage/${dir}-junit.xml"
+          done
+
       - name: Upload combined results
         uses: actions/upload-artifact@v6
         with:
           name: combined-coverage
           path: combined-coverage/
 
-      - name: Merge JUnit XML reports per Python version
-        run: |
-          versions=$(ls -d test-results-all/test-results-py* 2>/dev/null | sed 's|.*/test-results-py||' | sed 's|-[0-9]*$||' | sort -uV)
-          min_version=$(echo "$versions" | head -1)
-          for version in $versions; do
-            pattern="test-results-all/test-results-py${version}-*/junit.xml"
-            if [ "$version" = "$min_version" ]; then
-              pattern="$pattern test-results-all/test-results-functional/junit.xml"
-            fi
-            npx -y junit-report-merger combined-junit-py${version}.xml $pattern
-          done
-
-      - name: Upload merged JUnit XMLs
-        uses: actions/upload-artifact@v6
-        with:
-          name: junit-combined
-          path: combined-junit-py*.xml
-
       - name: Display test results
         uses: dorny/test-reporter@v2
         if: ${{ !cancelled() }}
         with:
           name: Test Results
-          path: combined-junit-py*.xml
+          path: combined-coverage/*-junit.xml
           reporter: python-xunit
-
-      - name: Upload test results to Codecov
-        uses: bitcart/bitcart-actions/actions/codecov@master
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          upload_test_results: "true"
-          test_results_files: combined-junit-py*.xml
 
       - name: Delete intermediate artifacts
         uses: geekyeggo/delete-artifact@v5

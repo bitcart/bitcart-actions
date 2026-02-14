@@ -115,15 +115,6 @@ jobs:
           flags: functional-tests
           env_vars: PYTHON
 
-      - uses: bitcart/bitcart-actions/actions/codecov@master
-        name: Upload test results to Codecov
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          upload_test_results: "true"
-          name: Functional Tests - Python ${{ env.PYTHON }}
-          flags: functional-tests
-          env_vars: PYTHON
-
       - uses: bitcart/bitcart-actions/actions/upload-test-results@master
         name: Upload test results
         with:
