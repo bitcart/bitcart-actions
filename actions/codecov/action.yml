@@ -22,6 +22,11 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Prepare coverage XML
+      shell: bash
+      run: |
+        coverage xml -o test-results/coverage.xml
+
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:

@@ -106,7 +106,6 @@ jobs:
         run: |
           sleep 15
           ${{ inputs.tests-target }}
-          coverage xml -o test-results/coverage.xml
 
       - uses: bitcart/bitcart-actions/actions/codecov@master
         name: Upload coverage to Codecov
