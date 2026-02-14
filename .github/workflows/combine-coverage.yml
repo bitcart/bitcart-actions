@@ -102,7 +102,7 @@ jobs:
           reporter: python-xunit
 
       - name: Upload test results to Codecov
-        if: ${{ matrix.include_functional }}
+        # if: ${{ matrix.include_functional }}
         uses: bitcart/bitcart-actions/actions/codecov@master
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
