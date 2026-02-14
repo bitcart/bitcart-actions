@@ -22,10 +22,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Upload coverage (group start)
-      shell: bash
-      run: echo "::group::Upload coverage"
-
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:
@@ -36,15 +32,6 @@ runs:
         files: test-results/coverage.xml
         disable_search: true
 
-    - name: Upload coverage (group end)
-      shell: bash
-      run: echo "::endgroup::"
-
-    - name: Upload test results to Codecov (group start)
-      if: ${{ !cancelled() }}
-      shell: bash
-      run: echo "::group::Upload test results to Codecov"
-
     - name: Upload test results to Codecov
       if: ${{ !cancelled() }}
       uses: codecov/codecov-action@v5
@@ -53,8 +40,3 @@ runs:
         report_type: test_results
         files: test-results/junit.xml
         disable_search: true
-
-    - name: Upload test results to Codecov (group end)
-      if: ${{ !cancelled() }}
-      shell: bash
-      run: echo "::endgroup::"

@@ -11,10 +11,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Validate plugins (group start)
-      shell: bash
-      run: echo "::group::Validate plugins"
-
     - name: Validate plugins
       shell: bash
       run: |
@@ -25,7 +21,3 @@ runs:
             bitcart-cli plugin validate "$dir"
           done
         fi
-
-    - name: Validate plugins (group end)
-      shell: bash
-      run: echo "::endgroup::"

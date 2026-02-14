@@ -1,0 +1,122 @@
+name: Functional Tests
+
+on:
+  workflow_call:
+    inputs:
+      tests-target:
+        description: "Tests target to run"
+        type: string
+        default: "just functional"
+      daemon-dir:
+        description: "Daemon directory"
+        type: string
+        default: "."
+      install-dependencies:
+        description: "Command to install dependencies"
+        type: string
+        default: ""
+      enable-redis:
+        description: "Enable Redis service"
+        type: boolean
+        default: false
+      enable-postgres:
+        description: "Enable PostgreSQL service"
+        type: boolean
+        default: false
+    secrets:
+      CODECOV_TOKEN:
+        required: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: ${{ inputs.enable-redis && 'redis:alpine' || '' }}
+        ports:
+          - 6379:6379
+
+      postgres:
+        image: ${{ inputs.enable-postgres && 'postgres:18-alpine' || '' }}
+        env:
+          POSTGRES_DB: bitcart_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+
+    env:
+      TEST_ARGS: "-o junit_family=legacy --junitxml test-results/junit.xml --cov-report html:coverage"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: bitcart/bitcart-actions/actions/setup-python@master
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libsecp256k1-dev
+
+      - name: Install dependencies
+        if: inputs.install-dependencies != ''
+        run: ${{ inputs.install-dependencies }}
+
+      - name: Install regtest utils
+        run: |
+          sudo add-apt-repository -y ppa:luke-jr/bitcoincore
+          sudo apt update
+          sudo apt install -y bitcoind screen
+
+      - uses: bitcart/bitcart-actions/actions/install-fulcrum@master
+        name: Install Fulcrum
+
+      - uses: bitcart/bitcart-actions/actions/run-in-background@master
+        name: Start bitcoind
+        with:
+          run: just bitcoind
+          key: bitcoind
+
+      - uses: bitcart/bitcart-actions/actions/run-in-background@master
+        name: Start Fulcrum
+        with:
+          run: sleep 10 && just fulcrum
+          key: fulcrum
+
+      - uses: bitcart/bitcart-actions/actions/run-in-background@master
+        name: Start regtest daemon
+        with:
+          run: |
+            sleep 10
+            cd ${{ inputs.daemon-dir }}
+            just regtest
+          key: regtest
+
+      - uses: bitcart/bitcart-actions/actions/run-in-background@master
+        name: Start regtest LN daemon
+        with:
+          run: |
+            sleep 10
+            cd ${{ inputs.daemon-dir }}
+            just regtestln
+          key: regtestln
+
+      - name: Run functional tests
+        run: |
+          sleep 15
+          ${{ inputs.tests-target }}
+          coverage xml -o test-results/coverage.xml
+
+      - uses: bitcart/bitcart-actions/actions/codecov@master
+        name: Upload coverage to Codecov
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: Functional Tests - Python ${{ env.PYTHON }}
+          flags: functional-tests
+          env_vars: PYTHON
+
+      - uses: bitcart/bitcart-actions/actions/upload-test-results@master
+        name: Upload test results
+        with:
+          suffix: functional
