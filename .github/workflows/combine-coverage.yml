@@ -82,22 +82,20 @@ jobs:
       - name: Collect test result files
         id: collect
         run: |
-          files=$(find test-results-all/ -path "*/test-results-py${{ matrix.version }}-*/junit.xml")
+          pattern="test-results-all/test-results-py${{ matrix.version }}-*/junit.xml"
           if [ "${{ matrix.include_functional }}" = "true" ]; then
-            files="$files"$'\n'$(find test-results-all/ -path "*/test-results-functional/junit.xml")
+            pattern="$pattern"$'\n'"test-results-all/test-results-functional/junit.xml"
           fi
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "path<<$EOF" >> "$GITHUB_OUTPUT"
-          echo "$files" >> "$GITHUB_OUTPUT"
-          echo "$EOF" >> "$GITHUB_OUTPUT"
-          echo "csv=$(echo "$files" | tr '\n' ',' | sed 's/,$//')" >> "$GITHUB_OUTPUT"
+          echo "pattern<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$pattern" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Display test results
         uses: dorny/test-reporter@v2
         if: ${{ !cancelled() }}
         with:
           name: Test Results (Python ${{ matrix.version }})
-          path: ${{ steps.collect.outputs.path }}
+          path: ${{ steps.collect.outputs.pattern }}
           reporter: python-xunit
 
       - name: Upload test results to Codecov
@@ -105,7 +103,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           upload_test_results: "true"
-          test_results_files: ${{ steps.collect.outputs.csv }}
+          test_results_files: ${{ steps.collect.outputs.pattern }}
           flags: "py${{ matrix.version }}"
           name: "Python ${{ matrix.version }}"
 
