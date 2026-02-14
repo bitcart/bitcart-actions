@@ -54,14 +54,6 @@ jobs:
           name: combined-coverage
           path: combined-coverage/
 
-      - name: Display test results
-        uses: dorny/test-reporter@v2
-        if: ${{ !cancelled() }}
-        with:
-          name: Test Results
-          path: test-results-all/**/junit.xml
-          reporter: python-xunit
-
       - name: Discover Python versions
         id: discover
         run: |
@@ -90,20 +82,30 @@ jobs:
       - name: Collect test result files
         id: collect
         run: |
-          files=$(find test-results-all/ -path "*/test-results-py${{ matrix.version }}-*/junit.xml" | tr '\n' ',')
+          files=$(find test-results-all/ -path "*/test-results-py${{ matrix.version }}-*/junit.xml")
           if [ "${{ matrix.include_functional }}" = "true" ]; then
-            functional=$(find test-results-all/ -path "*/test-results-functional/junit.xml" | tr '\n' ',')
-            files="${files}${functional}"
+            files="$files"$'\n'$(find test-results-all/ -path "*/test-results-functional/junit.xml")
           fi
-          files="${files%,}"
-          echo "files=$files" >> "$GITHUB_OUTPUT"
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "path<<$EOF" >> "$GITHUB_OUTPUT"
+          echo "$files" >> "$GITHUB_OUTPUT"
+          echo "$EOF" >> "$GITHUB_OUTPUT"
+          echo "csv=$(echo "$files" | tr '\n' ',' | sed 's/,$//')" >> "$GITHUB_OUTPUT"
+
+      - name: Display test results
+        uses: dorny/test-reporter@v2
+        if: ${{ !cancelled() }}
+        with:
+          name: Test Results (Python ${{ matrix.version }})
+          path: ${{ steps.collect.outputs.path }}
+          reporter: python-xunit
 
       - name: Upload test results to Codecov
         uses: bitcart/bitcart-actions/actions/codecov@master
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           upload_test_results: "true"
-          test_results_files: ${{ steps.collect.outputs.files }}
+          test_results_files: ${{ steps.collect.outputs.csv }}
           flags: "py${{ matrix.version }}"
           name: "Python ${{ matrix.version }}"
 
