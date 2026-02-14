@@ -14,12 +14,16 @@ runs:
     - name: Install bitcart-cli (go)
       if: inputs.use-go == 'true'
       shell: bash
-      run: go install github.com/bitcart/bitcart-cli@latest
+      run: |
+        echo "::group::Install bitcart-cli (go)"
+        go install github.com/bitcart/bitcart-cli@latest
+        echo "::endgroup::"
 
     - name: Install bitcart-cli (binary release)
       if: inputs.use-go != 'true'
       shell: bash
       run: |
+        echo "::group::Install bitcart-cli (binary release)"
         OS=$(uname -s)
         ARCH=$(uname -m)
         if [[ "$ARCH" == "x86_64" ]]; then
@@ -28,3 +32,4 @@ runs:
         sudo curl -L "https://github.com/bitcart/bitcart-cli/releases/latest/download/bitcart-cli-$OS-$ARCH" \
           -o /usr/local/bin/bitcart-cli
         sudo chmod +x /usr/local/bin/bitcart-cli
+        echo "::endgroup::"

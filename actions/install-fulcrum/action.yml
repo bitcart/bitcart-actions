@@ -8,6 +8,7 @@ runs:
     - name: Install Fulcrum
       shell: bash
       run: |
+        echo "::group::Install Fulcrum"
         FULCRUM_VERSION=$(curl --silent https://api.github.com/repos/cculianu/Fulcrum/releases/latest | jq -r .tag_name | tr -d v)
         ARCHIVE_NAME=Fulcrum-${FULCRUM_VERSION}-$(uname -m)-linux.tar.gz
         wget https://github.com/cculianu/Fulcrum/releases/download/v${FULCRUM_VERSION}/${ARCHIVE_NAME}
@@ -16,3 +17,4 @@ runs:
         sudo cp Fulcrum/${ARCHIVE_NAME/.tar.gz/}/Fulcrum /usr/local/bin/Fulcrum
         sudo chmod +x /usr/local/bin/Fulcrum
         rm -rf ${ARCHIVE_NAME} Fulcrum
+        echo "::endgroup::"

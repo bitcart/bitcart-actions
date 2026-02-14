@@ -11,11 +11,23 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Upload test results (group start)
+      shell: bash
+      run: echo "::group::Upload test results"
+
     - name: Upload test results
       uses: actions/upload-artifact@v6
       with:
         name: test-results${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
         path: test-results/
+
+    - name: Upload test results (group end)
+      shell: bash
+      run: echo "::endgroup::"
+
+    - name: Upload coverage artifacts (group start)
+      shell: bash
+      run: echo "::group::Upload coverage artifacts"
 
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@v6
@@ -23,9 +35,21 @@ runs:
         name: coverage${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
         path: coverage/
 
+    - name: Upload coverage artifacts (group end)
+      shell: bash
+      run: echo "::endgroup::"
+
+    - name: Upload coverage data (group start)
+      shell: bash
+      run: echo "::group::Upload coverage data"
+
     - name: Upload coverage data
       uses: actions/upload-artifact@v6
       with:
         name: coverage-data${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
         path: .coverage
         include-hidden-files: true
+
+    - name: Upload coverage data (group end)
+      shell: bash
+      run: echo "::endgroup::"
