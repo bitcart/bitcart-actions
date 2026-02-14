@@ -1,0 +1,63 @@
+name: Combine Coverage
+
+on:
+  workflow_call:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: bitcart/bitcart-actions/actions/setup-python@master
+
+      - name: Install dependencies
+        run: uv pip install coverage[toml] junitparser
+
+      - name: Download all coverage data artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: coverage-data-*
+          path: coverage-data/
+
+      - name: Download all test results artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: test-results-*
+          path: test-results-all/
+
+      - name: Combine coverage
+        run: |
+          i=0
+          for f in $(find coverage-data/ -name '.coverage'); do
+            cp "$f" ".coverage.$i"
+            i=$((i + 1))
+          done
+          coverage combine
+          coverage html -d combined-coverage/
+          coverage xml -o combined-coverage/coverage.xml
+          coverage report --format=markdown > combined-coverage/summary.md
+          echo "## Coverage Summary"
+          cat combined-coverage/summary.md
+
+      - name: Merge JUnit XML reports
+        run: |
+          junitparser merge $(find test-results-all/ -name 'junit.xml') combined-coverage/junit.xml
+
+      - name: Upload combined results
+        uses: actions/upload-artifact@v6
+        with:
+          name: combined-coverage
+          path: combined-coverage/
+
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            test-results-*
+            coverage-*
+            coverage-data-*
+          failOnError: false
