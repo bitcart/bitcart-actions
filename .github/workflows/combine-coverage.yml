@@ -79,18 +79,13 @@ jobs:
           pattern: test-results-*
           path: test-results-all/
 
-      - name: Collect test result files
-        id: collect
+      - name: Merge JUnit XML reports
         run: |
           pattern="test-results-all/test-results-py${{ matrix.version }}-*/junit.xml"
           if [ "${{ matrix.include_functional }}" = "true" ]; then
-            pattern="$pattern,test-results-all/test-results-functional/junit.xml"
+            pattern="$pattern test-results-all/test-results-functional/junit.xml"
           fi
-          echo "pattern=$pattern" >> "$GITHUB_OUTPUT"
-
-      - name: Merge JUnit XML reports
-        run: |
-          npx -y junit-report-merger combined-junit-py${{ matrix.version }}.xml ${{ steps.collect.outputs.pattern }}
+          npx -y junit-report-merger combined-junit-py${{ matrix.version }}.xml $pattern
 
       - name: Upload merged JUnit XML
         uses: actions/upload-artifact@v6
@@ -107,6 +102,7 @@ jobs:
           reporter: python-xunit
 
       - name: Upload test results to Codecov
+        if: ${{ matrix.include_functional }}
         uses: bitcart/bitcart-actions/actions/codecov@master
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -115,17 +111,17 @@ jobs:
           flags: "py${{ matrix.version }}"
           name: "Python ${{ matrix.version }}"
 
-  cleanup:
-    needs: [run, upload-test-results]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+  # cleanup:
+  #   needs: [run, upload-test-results]
+  #   if: ${{ !cancelled() }}
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Delete intermediate artifacts
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: |
-            test-results-*
-            coverage-*
-            coverage-data-*
-          failOnError: false
+  #   steps:
+  #     - name: Delete intermediate artifacts
+  #       uses: geekyeggo/delete-artifact@v5
+  #       with:
+  #         name: |
+  #           test-results-*
+  #           coverage-*
+  #           coverage-data-*
+  #         failOnError: false
