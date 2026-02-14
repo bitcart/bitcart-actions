@@ -64,6 +64,7 @@ jobs:
 
   upload-test-results:
     needs: run
+    name: upload-test-results-{{ matrix.version }}
     if: ${{ !cancelled() && needs.run.outputs.python-versions != '[]' }}
     runs-on: ubuntu-latest
     strategy:
@@ -111,17 +112,17 @@ jobs:
           flags: "py${{ matrix.version }}"
           name: "Python ${{ matrix.version }}"
 
-  # cleanup:
-  #   needs: [run, upload-test-results]
-  #   if: ${{ !cancelled() }}
-  #   runs-on: ubuntu-latest
+  cleanup:
+    needs: [run, upload-test-results]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Delete intermediate artifacts
-  #       uses: geekyeggo/delete-artifact@v5
-  #       with:
-  #         name: |
-  #           test-results-*
-  #           coverage-*
-  #           coverage-data-*
-  #         failOnError: false
+    steps:
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            test-results-*
+            coverage-*
+            coverage-data-*
+          failOnError: false
