@@ -1,0 +1,30 @@
+name: "Install bitcart-cli"
+
+description: "Install the Bitcart CLI binary"
+
+inputs:
+  use-go:
+    description: "Install via go install (requires Go on PATH)"
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install bitcart-cli (go)
+      if: inputs.use-go == 'true'
+      shell: bash
+      run: go install github.com/bitcart/bitcart-cli@latest
+
+    - name: Install bitcart-cli (binary release)
+      if: inputs.use-go != 'true'
+      shell: bash
+      run: |
+        OS=$(uname -s)
+        ARCH=$(uname -m)
+        if [[ "$ARCH" == "x86_64" ]]; then
+          ARCH="amd64"
+        fi
+        sudo curl -L "https://github.com/bitcart/bitcart-cli/releases/latest/download/bitcart-cli-$OS-$ARCH" \
+          -o /usr/local/bin/bitcart-cli
+        sudo chmod +x /usr/local/bin/bitcart-cli

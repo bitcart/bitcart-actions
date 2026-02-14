@@ -1,0 +1,31 @@
+name: "Upload Test Results"
+
+description: "Upload test results and coverage artifacts"
+
+inputs:
+  suffix:
+    description: "Suffix for artifact names"
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Upload test results
+      uses: actions/upload-artifact@v6
+      with:
+        name: test-results${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
+        path: test-results/
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: coverage${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
+        path: coverage/
+
+    - name: Upload coverage data
+      uses: actions/upload-artifact@v6
+      with:
+        name: coverage-data${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
+        path: .coverage
+        include-hidden-files: true

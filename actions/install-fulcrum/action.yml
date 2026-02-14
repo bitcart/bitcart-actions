@@ -1,0 +1,18 @@
+name: "Install Fulcrum"
+
+description: "Install the latest Fulcrum Bitcoin indexer"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Fulcrum
+      shell: bash
+      run: |
+        FULCRUM_VERSION=$(curl --silent https://api.github.com/repos/cculianu/Fulcrum/releases/latest | jq -r .tag_name | tr -d v)
+        ARCHIVE_NAME=Fulcrum-${FULCRUM_VERSION}-$(uname -m)-linux.tar.gz
+        wget https://github.com/cculianu/Fulcrum/releases/download/v${FULCRUM_VERSION}/${ARCHIVE_NAME}
+        mkdir -p Fulcrum
+        tar -xvzf ${ARCHIVE_NAME} -C Fulcrum
+        sudo cp Fulcrum/${ARCHIVE_NAME/.tar.gz/}/Fulcrum /usr/local/bin/Fulcrum
+        sudo chmod +x /usr/local/bin/Fulcrum
+        rm -rf ${ARCHIVE_NAME} Fulcrum

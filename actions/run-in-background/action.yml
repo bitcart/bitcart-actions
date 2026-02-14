@@ -1,4 +1,4 @@
-name: Run in background
+name: "Run in background"
 
 description: "Run a command in the background and output its logs in the post step."
 
@@ -9,7 +9,7 @@ inputs:
   key:
     description: "Unique key to identify this background process (used for log file names and state)."
     required: false
-    default: POST
+    default: "POST"
 
 runs:
   using: composite

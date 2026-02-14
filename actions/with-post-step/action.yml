@@ -20,7 +20,7 @@
 #                                                                                                                      #
 # SPDX-License-Identifier: Apache-2.0                                                                                  #
 # ==================================================================================================================== #
-name: With post step
+name: "With post step"
 
 description: "Generic JS Action to execute a main command and set a command as a post step."
 
@@ -34,7 +34,7 @@ inputs:
   key:
     description: "Name of the state variable used to detect the post step."
     required: false
-    default: POST
+    default: "POST"
 
 runs:
   using: "node24"
