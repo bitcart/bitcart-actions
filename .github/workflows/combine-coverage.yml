@@ -84,18 +84,26 @@ jobs:
         run: |
           pattern="test-results-all/test-results-py${{ matrix.version }}-*/junit.xml"
           if [ "${{ matrix.include_functional }}" = "true" ]; then
-            pattern="$pattern"$'\n'"test-results-all/test-results-functional/junit.xml"
+            pattern="$pattern,test-results-all/test-results-functional/junit.xml"
           fi
-          echo "pattern<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$pattern" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "pattern=$pattern" >> "$GITHUB_OUTPUT"
+
+      - name: Merge JUnit XML reports
+        run: |
+          npx -y junit-report-merger combined-junit-py${{ matrix.version }}.xml ${{ steps.collect.outputs.pattern }}
+
+      - name: Upload merged JUnit XML
+        uses: actions/upload-artifact@v6
+        with:
+          name: junit-py${{ matrix.version }}
+          path: combined-junit-py${{ matrix.version }}.xml
 
       - name: Display test results
         uses: dorny/test-reporter@v2
         if: ${{ !cancelled() }}
         with:
           name: Test Results (Python ${{ matrix.version }})
-          path: ${{ steps.collect.outputs.pattern }}
+          path: combined-junit-py${{ matrix.version }}.xml
           reporter: python-xunit
 
       - name: Upload test results to Codecov
@@ -103,7 +111,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           upload_test_results: "true"
-          test_results_files: ${{ steps.collect.outputs.pattern }}
+          test_results_files: combined-junit-py${{ matrix.version }}.xml
           flags: "py${{ matrix.version }}"
           name: "Python ${{ matrix.version }}"
 
