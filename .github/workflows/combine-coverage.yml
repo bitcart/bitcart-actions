@@ -40,8 +40,8 @@ jobs:
           coverage html -d combined-coverage/
           coverage xml -o combined-coverage/coverage.xml
           coverage report --format=markdown > combined-coverage/summary.md
-          echo "## Coverage Summary"
-          cat combined-coverage/summary.md
+          echo "## Coverage Summary" | tee -a "$GITHUB_STEP_SUMMARY"
+          cat combined-coverage/summary.md | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Merge JUnit XML reports
         run: |
