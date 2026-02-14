@@ -14,7 +14,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: ./actions/with-post-step
+    - uses: bitcart/bitcart-actions/actions/with-post-step@master
       with:
         key: ${{ inputs.key }}
         main: |
