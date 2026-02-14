@@ -1,0 +1,31 @@
+name: "Validate Bitcart Plugins"
+
+description: "Validate Bitcart plugins in a directory"
+
+inputs:
+  directory:
+    description: "Directory containing plugins"
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Validate plugins (group start)
+      shell: bash
+      run: echo "::group::Validate plugins"
+
+    - name: Validate plugins
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.directory }}/manifest.json" ]; then
+          bitcart-cli plugin validate "${{ inputs.directory }}"
+        else
+          for dir in "${{ inputs.directory }}"/*/; do
+            bitcart-cli plugin validate "$dir"
+          done
+        fi
+
+    - name: Validate plugins (group end)
+      shell: bash
+      run: echo "::endgroup::"
