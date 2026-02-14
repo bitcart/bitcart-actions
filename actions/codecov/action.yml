@@ -42,6 +42,9 @@ runs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.token }}
+        name: ${{ inputs.name }}
+        flags: ${{ inputs.flags }}
+        env_vars: ${{ inputs.env_vars }}
         report_type: test_results
         files: test-results/junit.xml
         disable_search: true
