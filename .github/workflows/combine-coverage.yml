@@ -10,6 +10,8 @@ jobs:
   run:
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
+    outputs:
+      python-versions: ${{ steps.discover.outputs.versions }}
 
     steps:
       - uses: actions/checkout@v6
@@ -60,14 +62,57 @@ jobs:
           path: test-results-all/**/junit.xml
           reporter: python-xunit
 
+      - name: Discover Python versions
+        id: discover
+        run: |
+          versions=$(ls -d test-results-all/test-results-py* 2>/dev/null | sed 's|.*/test-results-py||' | sed 's|-[0-9]*$||' | sort -uV)
+          min_version=$(echo "$versions" | head -1)
+          json_array=$(echo "$versions" | jq -R -s -c --arg min "$min_version" 'split("\n") | map(select(. != "")) | map({version: ., include_functional: (. == $min)})')
+          echo "versions=$json_array" >> "$GITHUB_OUTPUT"
+
+  upload-test-results:
+    needs: run
+    if: ${{ !cancelled() && needs.run.outputs.python-versions != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.run.outputs.python-versions) }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download test results
+        uses: actions/download-artifact@v7
+        with:
+          pattern: test-results-*
+          path: test-results-all/
+
+      - name: Collect test result files
+        id: collect
+        run: |
+          files=$(find test-results-all/ -path "*/test-results-py${{ matrix.version }}-*/junit.xml" | tr '\n' ',')
+          if [ "${{ matrix.include_functional }}" = "true" ]; then
+            functional=$(find test-results-all/ -path "*/test-results-functional/junit.xml" | tr '\n' ',')
+            files="${files}${functional}"
+          fi
+          files="${files%,}"
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
         uses: bitcart/bitcart-actions/actions/codecov@master
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           upload_test_results: "true"
-          test_results_files: test-results-all/**/junit.xml
+          test_results_files: ${{ steps.collect.outputs.files }}
+          flags: "py${{ matrix.version }}"
+          name: "Python ${{ matrix.version }}"
 
+  cleanup:
+    needs: [run, upload-test-results]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Delete intermediate artifacts
         uses: geekyeggo/delete-artifact@v5
         with:
