@@ -26,8 +26,17 @@ runs:
             disown
           '
         post: |
-          BGDIR="${RUNNER_TEMP}/run-in-background"
-          TOKEN="$(uuidgen)"
+          MATCHERS=()
+          for f in "$RUNNER_TEMP"/*.json; do
+            owner=$(jq -r '.problemMatcher[]?.owner // empty' "$f" 2>/dev/null)
+            if [ -n "$owner" ]; then
+              echo "::remove-matcher owner=${owner}::"
+              MATCHERS+=("$f")
+            fi
+          done
+
+          echo "Found ${#MATCHERS[@]} problem matchers"
+
           if [ -f "$BGDIR/${{ inputs.key }}.out" ]; then
             echo "::group::stdout"
             echo "::stop-commands::${TOKEN}"
@@ -42,3 +51,7 @@ runs:
             echo "::${TOKEN}::"
             echo "::endgroup::"
           fi
+
+          for f in "${MATCHERS[@]}"; do
+            echo "::add-matcher::${f}"
+          done
