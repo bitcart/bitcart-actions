@@ -25,6 +25,7 @@ runs:
         repository: ${{ inputs.daemon-repository }}
         ref: ${{ inputs.daemon-repository-branch }}
         path: __daemon
+        persist-credentials: false
 
     - name: Move daemon to target directory
       if: inputs.daemon-repository != ''
