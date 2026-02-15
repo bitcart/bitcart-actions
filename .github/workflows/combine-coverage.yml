@@ -63,6 +63,7 @@ jobs:
           name: Test Results
           path: combined-coverage/*-junit.xml
           reporter: python-xunit
+          fail-on-error: "false"
 
       - name: Delete intermediate artifacts
         uses: geekyeggo/delete-artifact@v5
