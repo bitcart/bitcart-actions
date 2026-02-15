@@ -6,7 +6,7 @@ on:
       install-dependencies:
         description: "Command to install project dependencies"
         type: string
-        default: ""
+        default: "uv pip install prek"
       extra-checks:
         description: "Extra checks to run before prek"
         type: string
