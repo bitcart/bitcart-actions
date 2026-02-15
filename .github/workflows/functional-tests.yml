@@ -59,29 +59,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Checkout daemon
-        if: inputs.daemon-repository != ''
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ inputs.daemon-repository }}
-          ref: ${{ inputs.daemon-repository-branch }}
-          path: __daemon
-
-      - name: Move daemon to target directory
-        if: inputs.daemon-repository != ''
-        run: mv __daemon ${{ inputs.daemon-dir }}
-
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
 
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y libsecp256k1-dev
-
-      - name: Install dependencies
-        if: inputs.install-dependencies != ''
-        run: ${{ inputs.install-dependencies }}
+      - name: Install daemon
+        uses: bitcart/bitcart-actions/actions/install-daemon@master
+        with:
+          daemon-repository: ${{ inputs.daemon-repository }}
+          daemon-repository-branch: ${{ inputs.daemon-repository-branch }}
+          daemon-dir: ${{ inputs.daemon-dir }}
+          install-dependencies: ${{ inputs.install-dependencies }}
 
       - name: Install regtest utils
         run: |

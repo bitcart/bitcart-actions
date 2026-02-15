@@ -1,0 +1,43 @@
+name: "Install Daemon"
+description: "Install Bitcart daemon with its dependencies"
+
+inputs:
+  daemon-repository:
+    description: "Daemon repository to checkout. Leave empty if already in daemon repo."
+    default: ""
+  daemon-repository-branch:
+    description: "Branch of the daemon repository to checkout"
+    default: ""
+  daemon-dir:
+    description: "Target directory for the daemon"
+    default: "."
+  install-dependencies:
+    description: "Command to install daemon Python dependencies. Required if dependencies need to be installed."
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout daemon
+      if: inputs.daemon-repository != ''
+      uses: actions/checkout@v6
+      with:
+        repository: ${{ inputs.daemon-repository }}
+        ref: ${{ inputs.daemon-repository-branch }}
+        path: __daemon
+
+    - name: Move daemon to target directory
+      if: inputs.daemon-repository != ''
+      shell: bash
+      run: mv __daemon ${{ inputs.daemon-dir }}
+
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt install -y libsecp256k1-dev
+
+    - name: Install daemon dependencies
+      if: inputs.install-dependencies != ''
+      shell: bash
+      run: ${{ inputs.install-dependencies }}
