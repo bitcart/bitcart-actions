@@ -18,6 +18,10 @@ inputs:
     description: "Environment variables to include in Codecov report"
     required: false
     default: ""
+  upload_coverage:
+    description: "Whether to upload coverage report"
+    required: false
+    default: "true"
   test_results_files:
     description: "JUnit XML file paths to upload (supports globs)"
     required: false
@@ -27,11 +31,13 @@ runs:
   using: composite
   steps:
     - name: Prepare coverage XML
+      if: ${{ inputs.upload_coverage == 'true' }}
       shell: bash
       run: |
         coverage xml -o test-results/coverage.xml
 
     - name: Upload coverage
+      if: ${{ inputs.upload_coverage == 'true' }}
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.token }}
