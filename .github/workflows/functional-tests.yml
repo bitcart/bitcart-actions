@@ -35,6 +35,8 @@ on:
       CODECOV_TOKEN:
         required: true
 
+permissions: {}
+
 jobs:
   run:
     runs-on: ubuntu-latest

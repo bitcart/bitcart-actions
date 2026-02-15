@@ -15,6 +15,12 @@ on:
         description: "Cache prek repositories and data"
         type: boolean
         default: true
+      run-zizmor:
+        description: "Run zizmor security audit on GitHub Actions workflows"
+        type: boolean
+        default: false
+
+permissions: {}
 
 jobs:
   run:
@@ -50,3 +56,18 @@ jobs:
       - name: Prune prek cache
         run: |
           prek cache gc -v || echo "Failed to prune prek cache"
+
+  zizmor:
+    if: inputs.run-zizmor
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@v0.5.0

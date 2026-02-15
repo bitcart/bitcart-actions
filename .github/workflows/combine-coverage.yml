@@ -3,6 +3,8 @@ name: Combine Coverage
 on:
   workflow_call:
 
+permissions: {}
+
 jobs:
   run:
     runs-on: ubuntu-latest
