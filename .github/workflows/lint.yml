@@ -44,3 +44,7 @@ jobs:
 
       - name: Run prek checks
         run: prek run --all-files --show-diff-on-failure
+
+      - name: Prune prek cache
+        run: |
+          prek cache gc -v || echo "Failed to prune prek cache"
