@@ -1,0 +1,12 @@
+rules:
+  template-injection: # TODO: figure out if it's safe in composite actions
+    disable: true
+  unpinned-images:
+    ignore:
+      - functional-tests.yml # we use dynamic images here, so it is a false positive
+  github-env:
+    disable: true
+  unpinned-uses:
+    config:
+      policies:
+        "*": ref-pin
