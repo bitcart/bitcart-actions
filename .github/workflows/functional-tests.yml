@@ -11,6 +11,14 @@ on:
         description: "Daemon directory"
         type: string
         default: "."
+      daemon-repository:
+        description: "Extra repository to checkout as daemon"
+        type: string
+        default: ""
+      daemon-repository-branch:
+        description: "Branch of the daemon repository to checkout"
+        type: string
+        default: ""
       install-dependencies:
         description: "Command to install dependencies"
         type: string
@@ -50,6 +58,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Checkout daemon
+        if: inputs.daemon-repository != ''
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.daemon-repository }}
+          ref: ${{ inputs.daemon-repository-branch }}
+          path: __daemon
+
+      - name: Move daemon to target directory
+        if: inputs.daemon-repository != ''
+        run: mv __daemon ${{ inputs.daemon-dir }}
 
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
