@@ -76,23 +76,23 @@ jobs:
           sudo apt update
           sudo apt install -y bitcoind screen
 
-      - uses: bitcart/bitcart-actions/actions/install-fulcrum@master
-        name: Install Fulcrum
+      - name: Install Fulcrum
+        uses: bitcart/bitcart-actions/actions/install-fulcrum@master
 
-      - uses: bitcart/bitcart-actions/actions/run-in-background@master
-        name: Start bitcoind
+      - name: Start bitcoind
+        uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
           run: just bitcoind
           key: bitcoind
 
-      - uses: bitcart/bitcart-actions/actions/run-in-background@master
-        name: Start Fulcrum
+      - name: Start Fulcrum
+        uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
           run: sleep 10 && just fulcrum
           key: fulcrum
 
-      - uses: bitcart/bitcart-actions/actions/run-in-background@master
-        name: Start regtest daemon
+      - name: Start regtest daemon
+        uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
           run: |
             sleep 10
@@ -100,8 +100,8 @@ jobs:
             just regtest
           key: regtest
 
-      - uses: bitcart/bitcart-actions/actions/run-in-background@master
-        name: Start regtest LN daemon
+      - name: Start regtest LN daemon
+        uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
           run: |
             sleep 10
@@ -114,8 +114,8 @@ jobs:
           sleep 15
           ${{ inputs.tests-target }}
 
-      - uses: bitcart/bitcart-actions/actions/codecov@master
-        name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov
+        uses: bitcart/bitcart-actions/actions/codecov@master
         if: ${{ !cancelled() }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -124,8 +124,8 @@ jobs:
           env_vars: PYTHON
           upload_coverage: ${{ job.status == 'success' }}
 
-      - uses: bitcart/bitcart-actions/actions/upload-test-results@master
-        name: Upload test results
+      - name: Upload test results
+        uses: bitcart/bitcart-actions/actions/upload-test-results@master
         if: ${{ !cancelled() }}
         with:
           suffix: functional

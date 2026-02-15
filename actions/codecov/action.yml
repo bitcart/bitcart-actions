@@ -48,8 +48,8 @@ runs:
         disable_search: true
 
     - name: Upload test results to Codecov
-      uses: codecov/codecov-action@v5
       if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
