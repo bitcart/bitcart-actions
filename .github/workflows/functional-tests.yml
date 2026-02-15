@@ -109,13 +109,16 @@ jobs:
 
       - uses: bitcart/bitcart-actions/actions/codecov@master
         name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: Functional Tests - Python ${{ env.PYTHON }}
           flags: functional-tests
           env_vars: PYTHON
+          upload_coverage: ${{ job.status == 'success' }}
 
       - uses: bitcart/bitcart-actions/actions/upload-test-results@master
         name: Upload test results
+        if: ${{ !cancelled() }}
         with:
           suffix: functional
