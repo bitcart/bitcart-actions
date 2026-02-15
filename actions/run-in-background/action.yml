@@ -27,13 +27,18 @@ runs:
           '
         post: |
           BGDIR="${RUNNER_TEMP}/run-in-background"
+          TOKEN="$(uuidgen)"
           if [ -f "$BGDIR/${{ inputs.key }}.out" ]; then
             echo "::group::stdout"
+            echo "::stop-commands::${TOKEN}"
             cat "$BGDIR/${{ inputs.key }}.out"
+            echo "::${TOKEN}::"
             echo "::endgroup::"
           fi
           if [ -f "$BGDIR/${{ inputs.key }}.err" ]; then
             echo "::group::stderr"
+            echo "::stop-commands::${TOKEN}"
             cat "$BGDIR/${{ inputs.key }}.err"
+            echo "::${TOKEN}::"
             echo "::endgroup::"
           fi
