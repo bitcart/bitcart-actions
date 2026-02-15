@@ -36,10 +36,10 @@ jobs:
       - name: Combine coverage
         run: |
           i=0
-          for f in $(find coverage-data/ -name '.coverage'); do
+          while IFS= read -r f; do
             cp "$f" ".coverage.$i"
             i=$((i + 1))
-          done
+          done < <(find coverage-data/ -name '.coverage')
           coverage combine
           coverage html -d combined-coverage/
           coverage xml -o combined-coverage/coverage.xml
@@ -49,7 +49,7 @@ jobs:
 
       - name: Collect JUnit XML files
         run: |
-          find test-results-all/ -name 'junit.xml' | while read f; do
+          find test-results-all/ -name 'junit.xml' | while IFS= read -r f; do
             dir=$(basename "$(dirname "$f")")
             cp "$f" "combined-coverage/${dir}-junit.xml"
           done

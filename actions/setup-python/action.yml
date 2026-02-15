@@ -7,6 +7,9 @@ inputs:
     description: "Python version to install"
     required: false
     default: "3.12"
+  cache-dependency-glob:
+    description: "Glob pattern for uv cache. Use empty string to disable, omit to use uv default."
+    default: __unset__
 
 runs:
   using: composite
@@ -21,6 +24,7 @@ runs:
       uses: astral-sh/setup-uv@v7
       with:
         python-version: ${{ inputs.python-version }}
+        cache-dependency-glob: ${{ inputs.cache-dependency-glob != '__unset__' && inputs.cache-dependency-glob }}
         enable-cache: true
         activate-environment: true
         add-problem-matchers: false
