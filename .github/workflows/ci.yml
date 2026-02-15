@@ -17,5 +17,7 @@ jobs:
   lint:
     name: lint
     uses: bitcart/bitcart-actions/.github/workflows/lint.yml@master
+    permissions:
+      security-events: write
     with:
       run-zizmor: true
