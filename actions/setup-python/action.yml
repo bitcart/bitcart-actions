@@ -23,3 +23,4 @@ runs:
         python-version: ${{ inputs.python-version }}
         enable-cache: true
         activate-environment: true
+        add-problem-matchers: false
