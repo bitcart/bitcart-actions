@@ -14,13 +14,15 @@ on:
         type: boolean
         default: true
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     permissions:
+      contents: read
       security-events: write
 
     steps:
