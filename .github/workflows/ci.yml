@@ -21,3 +21,5 @@ jobs:
   zizmor:
     name: zizmor
     uses: bitcart/bitcart-actions/.github/workflows/zizmor-audit.yml@master
+    permissions:
+      security-events: write
