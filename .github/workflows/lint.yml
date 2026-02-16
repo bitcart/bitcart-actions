@@ -39,7 +39,7 @@ jobs:
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
         with:
-          cache-dependency-glob: ${{ inputs.install-dependencies == '' && '' || inputs.cache-dependency-glob }}
+          cache-dependency-glob: ${{ inputs.install-dependencies != '' && inputs.cache-dependency-glob || '' }}
 
       - name: Install dependencies
         run: ${{ inputs.install-dependencies || 'uv pip install prek' }}
