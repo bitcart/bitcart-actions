@@ -15,6 +15,12 @@ on:
         description: "Cache prek repositories and data"
         type: boolean
         default: true
+      cache-dependency-glob:
+        description: "Glob pattern for uv cache. Use empty string to disable, omit to use uv default."
+        type: string
+        default: |
+          **/pyproject.toml
+          **/uv.lock
       run-zizmor:
         description: "Run zizmor security audit on GitHub Actions workflows"
         type: boolean
@@ -32,8 +38,8 @@ jobs:
 
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
-        # with:
-        #   cache-dependency-glob: ${{ inputs.install-dependencies == '' && '' }}
+        with:
+          cache-dependency-glob: ${{ inputs.install-dependencies == '' && '' || inputs.cache-dependency-glob }}
 
       - name: Install dependencies
         run: ${{ inputs.install-dependencies || 'uv pip install prek' }}
