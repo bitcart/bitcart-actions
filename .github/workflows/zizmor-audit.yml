@@ -1,0 +1,21 @@
+name: Zizmor Audit
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@v0.5.0
