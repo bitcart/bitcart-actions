@@ -2,13 +2,18 @@ name: Combine Coverage
 
 on:
   workflow_call:
+    inputs:
+      os:
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
 
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.os || 'ubuntu-latest' }}
     if: ${{ !cancelled() }}
 
     steps:
@@ -25,13 +30,13 @@ jobs:
       - name: Download all coverage data artifacts
         uses: actions/download-artifact@v7
         with:
-          pattern: coverage-data-*
+          pattern: coverage-data-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: coverage-data/
 
       - name: Download all test results artifacts
         uses: actions/download-artifact@v7
         with:
-          pattern: test-results-*
+          pattern: test-results-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: test-results-all/
 
       - name: Combine coverage
@@ -58,14 +63,14 @@ jobs:
       - name: Upload combined results
         uses: actions/upload-artifact@v6
         with:
-          name: combined-coverage
+          name: combined-coverage${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: combined-coverage/
 
       - name: Display test results
         uses: dorny/test-reporter@v2
         if: ${{ !cancelled() }}
         with:
-          name: Test Results
+          name: Test Results${{ inputs.os && format(' ({0})', inputs.os) || '' }}
           path: combined-coverage/*-junit.xml
           reporter: python-xunit
           fail-on-error: "false"
@@ -74,7 +79,7 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: |
-            test-results-*
-            coverage-*
-            coverage-data-*
+            test-results-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
+            coverage-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
+            coverage-data-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           failOnError: false
