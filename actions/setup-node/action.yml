@@ -1,0 +1,26 @@
+name: "Setup Node.js"
+
+description: "Set up Node.js with pnpm or yarn"
+
+inputs:
+  package-manager:
+    description: "Package manager to use (pnpm or yarn)"
+    required: false
+    default: "pnpm"
+
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      if: inputs.package-manager == 'pnpm'
+      uses: pnpm/action-setup@v4
+
+    - name: Install Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: ".nvmrc"
+        cache: ${{ inputs.package-manager }}
+
+    - name: Install JS dependencies
+      shell: bash
+      run: ${{ inputs.package-manager == 'pnpm' && 'pnpm install' || 'yarn install' }}

@@ -15,6 +15,14 @@ on:
         description: "Cache prek repositories and data"
         type: boolean
         default: true
+      setup-node:
+        description: "Whether to install Node.js before linting"
+        type: boolean
+        default: false
+      node-package-manager:
+        description: "Node.js package manager to use (pnpm or yarn)"
+        type: string
+        default: "pnpm"
       cache-dependency-glob:
         description: "Glob pattern for uv cache. Use empty string to disable, omit to use uv default."
         type: string
@@ -32,6 +40,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+
+      - name: Set up Node.js
+        if: inputs.setup-node
+        uses: bitcart/bitcart-actions/actions/setup-node@master
+        with:
+          package-manager: ${{ inputs.node-package-manager }}
 
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
