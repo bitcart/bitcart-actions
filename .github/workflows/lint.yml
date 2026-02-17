@@ -17,8 +17,8 @@ on:
         default: true
       setup-node:
         description: "Whether to install Node.js before linting"
-        type: boolean
-        default: false
+        type: string
+        default: "false"
       node-package-manager:
         description: "Node.js package manager to use (pnpm or yarn)"
         type: string
@@ -42,7 +42,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        if: inputs.setup-node
+        if: inputs.setup-node == 'true'
         uses: bitcart/bitcart-actions/actions/setup-node@master
         with:
           package-manager: ${{ inputs.node-package-manager }}
