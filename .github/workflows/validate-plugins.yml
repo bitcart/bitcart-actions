@@ -26,6 +26,8 @@ jobs:
       - name: Set up Go
         if: inputs.use-go == 'true'
         uses: bitcart/bitcart-actions/actions/setup-go@master
+        with:
+          enable-cache: "false"
 
       - name: Install bitcart-cli
         uses: bitcart/bitcart-actions/actions/install-bitcart-cli@master
