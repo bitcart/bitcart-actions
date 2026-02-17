@@ -1,0 +1,38 @@
+name: Validate Plugins
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: "Directory containing plugins"
+        type: string
+        default: "."
+      use-go:
+        description: "Install bitcart-cli via go install (requires setup-go)"
+        type: string
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        if: inputs.use-go == 'true'
+        uses: bitcart/bitcart-actions/actions/setup-go@master
+
+      - name: Install bitcart-cli
+        uses: bitcart/bitcart-actions/actions/install-bitcart-cli@master
+        with:
+          use-go: ${{ inputs.use-go }}
+
+      - name: Validate plugins
+        uses: bitcart/bitcart-actions/actions/validate-plugins@master
+        with:
+          directory: ${{ inputs.directory }}

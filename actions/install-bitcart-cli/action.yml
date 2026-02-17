@@ -20,11 +20,12 @@ runs:
       if: inputs.use-go != 'true'
       shell: bash
       run: |
-        OS=$(uname -s)
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
         ARCH=$(uname -m)
-        if [[ "$ARCH" == "x86_64" ]]; then
-          ARCH="amd64"
-        fi
-        sudo curl -L "https://github.com/bitcart/bitcart-cli/releases/latest/download/bitcart-cli-$OS-$ARCH" \
-          -o /usr/local/bin/bitcart-cli
+        case "$ARCH" in
+            arm64)   ARCH="aarch64" ;;   # macOS returns arm64, releases use aarch64
+            armv7l)  ARCH="armv7" ;;     # Linux returns armv7l, releases use armv7
+        esac
+        sudo curl -L "https://github.com/bitcart/bitcart-cli/releases/latest/download/bitcart-cli-${OS}-${ARCH}" \
+            -o /usr/local/bin/bitcart-cli
         sudo chmod +x /usr/local/bin/bitcart-cli
