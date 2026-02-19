@@ -137,6 +137,13 @@ jobs:
           subject-checksums: ${{ runner.temp }}/checksums.txt
           push-to-registry: false
 
+      - uses: actions/upload-artifact@v6
+        with:
+          name: attestation-${{ env.PLATFORM_PAIR }}
+          path: ${{ steps.attest.outputs.bundle-path }}
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Attach attestation to registries
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
