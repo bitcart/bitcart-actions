@@ -17,7 +17,7 @@ on:
         required: false
         default: "."
       distributed:
-        description: "Use distributed matrix build (ubuntu-latest + ubuntu-arm-latest) instead of QEMU on a single runner"
+        description: "Use distributed matrix build instead of QEMU on a single runner"
         type: boolean
         default: false
       tags:
@@ -122,7 +122,7 @@ jobs:
           - runner: ubuntu-latest
             platform: linux/amd64
             suffix: amd64
-          - runner: ubuntu-arm-latest
+          - runner: ubuntu-24.04-arm
             platform: linux/arm64
             suffix: arm64
 
@@ -162,7 +162,9 @@ jobs:
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           provenance: mode=max
           sbom: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ inputs.image-name }}
+            ghcr.io/${{ inputs.image-name }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha,scope=build-${{ matrix.suffix }}
