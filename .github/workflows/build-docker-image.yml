@@ -109,6 +109,7 @@ jobs:
   build-matrix:
     if: ${{ inputs.distributed }}
     runs-on: ${{ matrix.runner }}
+    name: build-matrix-${{ matrix.suffix }}
     permissions:
       contents: read
       packages: write
