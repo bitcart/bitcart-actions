@@ -16,10 +16,6 @@ on:
         type: string
         required: false
         default: "."
-      distributed:
-        description: "Use distributed matrix build instead of QEMU on a single runner"
-        type: boolean
-        default: false
       tags:
         description: "Tags configuration passed to docker/metadata-action (multiline)"
         type: string
@@ -37,77 +33,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    if: ${{ !inputs.distributed }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-      artifact-metadata: write
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - uses: bitcart/bitcart-actions/actions/login-to-registries@master
-        with:
-          dockerhub-user: ${{ inputs.dockerhub-user }}
-          dockerhub-token: ${{ secrets.dockerhub-token }}
-
-      - uses: docker/setup-qemu-action@v3
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: sigstore/cosign-installer@v4.0.0
-
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: |
-            ${{ inputs.image-name }}
-            ghcr.io/${{ inputs.image-name }}
-          tags: ${{ inputs.tags }}
-
-      - uses: docker/build-push-action@v6
-        id: build
-        with:
-          context: ${{ inputs.context }}
-          file: ${{ inputs.dockerfile }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          provenance: mode=max
-          sbom: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Sign images with cosign
-        env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-          IMAGE: ${{ inputs.image-name }}
-        run: |
-          cosign sign --yes "${IMAGE}@${DIGEST}"
-          cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
-
-      - uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: index.docker.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
-
-      - uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: ghcr.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
-
   build-matrix:
-    if: ${{ inputs.distributed }}
     runs-on: ${{ matrix.runner }}
     name: build-matrix-${{ matrix.suffix }}
     permissions:
@@ -197,20 +123,34 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
-      - uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: index.docker.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.export.outputs.platform-digest }}
-          push-to-registry: true
+      - name: Create checksums file
+        env:
+          DIGEST: ${{ steps.export.outputs.platform-digest }}
+          IMAGE: ${{ inputs.image-name }}
+        run: |
+          printf '%s  index.docker.io/%s\n' "${DIGEST#sha256:}" "${IMAGE}" > "${{ runner.temp }}/checksums.txt"
+          printf '%s  ghcr.io/%s\n' "${DIGEST#sha256:}" "${IMAGE}" >> "${{ runner.temp }}/checksums.txt"
 
       - uses: actions/attest-build-provenance@v3
+        id: attest
         with:
-          subject-name: ghcr.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.export.outputs.platform-digest }}
-          push-to-registry: true
+          subject-checksums: ${{ runner.temp }}/checksums.txt
+          push-to-registry: false
+
+      - name: Attach attestation to registries
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          DIGEST: ${{ steps.export.outputs.platform-digest }}
+          IMAGE: ${{ inputs.image-name }}
+        run: |
+          cosign attach attestation \
+            --attestation "${BUNDLE}" \
+            "index.docker.io/${IMAGE}@${DIGEST}"
+          cosign attach attestation \
+            --attestation "${BUNDLE}" \
+            "ghcr.io/${IMAGE}@${DIGEST}"
 
   merge:
-    if: ${{ inputs.distributed }}
     needs: [build-matrix]
     runs-on: ubuntu-latest
     permissions:
@@ -262,6 +202,8 @@ jobs:
           digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           docker buildx imagetools inspect "${IMAGE}:${VERSION}"
+          printf '%s  index.docker.io/%s\n' "${digest#sha256:}" "${IMAGE}" > "${{ runner.temp }}/checksums.txt"
+          printf '%s  ghcr.io/%s\n' "${digest#sha256:}" "${IMAGE}" >> "${{ runner.temp }}/checksums.txt"
 
       - name: Sign images with cosign
         env:
@@ -272,13 +214,20 @@ jobs:
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
       - uses: actions/attest-build-provenance@v3
+        id: attest
         with:
-          subject-name: index.docker.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.inspect.outputs.digest }}
-          push-to-registry: true
+          subject-checksums: ${{ runner.temp }}/checksums.txt
+          push-to-registry: false
 
-      - uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: ghcr.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.inspect.outputs.digest }}
-          push-to-registry: true
+      - name: Attach attestation to registries
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          DIGEST: ${{ steps.inspect.outputs.digest }}
+          IMAGE: ${{ inputs.image-name }}
+        run: |
+          cosign attach attestation \
+            --attestation "${BUNDLE}" \
+            "index.docker.io/${IMAGE}@${DIGEST}"
+          cosign attach attestation \
+            --attestation "${BUNDLE}" \
+            "ghcr.io/${IMAGE}@${DIGEST}"
