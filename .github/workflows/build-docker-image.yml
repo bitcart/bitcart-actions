@@ -160,7 +160,7 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           platforms: ${{ matrix.platform }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,"name=${{ inputs.image-name }},ghcr.io/${{ inputs.image-name }}",push-by-digest=true,name-canonical=true,push=true
           provenance: mode=max
           sbom: true
           tags: |
@@ -172,10 +172,15 @@ jobs:
           cache-to: type=gha,scope=build-${{ matrix.suffix }},mode=max
 
       - name: Export digest
+        id: export
+        env:
+          IMAGE: ${{ inputs.image-name }}
         run: |
           mkdir -p ${{ runner.temp }}/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
+          platform_digest=$(docker buildx imagetools inspect "${IMAGE}@${digest}" --raw | jq -r '.manifests[] | select(.platform.os != "unknown") | .digest')
+          echo "platform-digest=${platform_digest}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v6
         with:
@@ -186,7 +191,7 @@ jobs:
 
       - name: Sign images with cosign
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
+          DIGEST: ${{ steps.export.outputs.platform-digest }}
           IMAGE: ${{ inputs.image-name }}
         run: |
           cosign sign --yes "${IMAGE}@${DIGEST}"
@@ -195,13 +200,13 @@ jobs:
       - uses: actions/attest-build-provenance@v3
         with:
           subject-name: index.docker.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.export.outputs.platform-digest }}
           push-to-registry: true
 
       - uses: actions/attest-build-provenance@v3
         with:
           subject-name: ghcr.io/${{ inputs.image-name }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.export.outputs.platform-digest }}
           push-to-registry: true
 
   merge:
