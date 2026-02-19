@@ -30,6 +30,11 @@ on:
         type: string
         required: false
         default: ""
+      prefix:
+        description: "Prefix for artifact names and cache scopes, useful when called from a matrix job"
+        type: string
+        required: false
+        default: ""
     secrets:
       dockerhub-token:
         required: true
@@ -72,7 +77,16 @@ jobs:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+          platform_pair="${platform//\//-}"
+          echo "PLATFORM_PAIR=${platform_pair}" >> "$GITHUB_ENV"
+          prefix="${{ inputs.prefix }}"
+          if [[ -n "$prefix" ]]; then
+            echo "BUILD_SCOPE=build-${prefix}-${{ matrix.suffix }}" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=${prefix}-digests-${platform_pair}" >> "$GITHUB_ENV"
+          else
+            echo "BUILD_SCOPE=build-${{ matrix.suffix }}" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=digests-${platform_pair}" >> "$GITHUB_ENV"
+          fi
 
       - uses: bitcart/bitcart-actions/actions/login-to-registries@master
         with:
@@ -105,8 +119,8 @@ jobs:
             ghcr.io/${{ inputs.image-name }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=gha,scope=build-${{ matrix.suffix }}
-          cache-to: type=gha,scope=build-${{ matrix.suffix }},mode=max
+          cache-from: type=gha,scope=${{ env.BUILD_SCOPE }}
+          cache-to: type=gha,scope=${{ env.BUILD_SCOPE }},mode=max
 
       - name: Export digest
         id: export
@@ -121,7 +135,7 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: ${{ env.ARTIFACT_NAME }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -166,10 +180,19 @@ jobs:
 
       - uses: sigstore/cosign-installer@v4.0.0
 
+      - name: Prepare
+        run: |
+          prefix="${{ inputs.prefix }}"
+          if [[ -n "$prefix" ]]; then
+            echo "ARTIFACT_PATTERN=${prefix}-digests-*" >> "$GITHUB_ENV"
+          else
+            echo "ARTIFACT_PATTERN=digests-*" >> "$GITHUB_ENV"
+          fi
+
       - uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
+          pattern: ${{ env.ARTIFACT_PATTERN }}
           merge-multiple: true
 
       - uses: docker/metadata-action@v5
