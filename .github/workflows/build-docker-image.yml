@@ -211,6 +211,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     steps:
       - uses: bitcart/bitcart-actions/actions/login-to-registries@master
@@ -219,6 +222,8 @@ jobs:
           dockerhub-token: ${{ secrets.dockerhub-token }}
 
       - uses: docker/setup-buildx-action@v3
+
+      - uses: sigstore/cosign-installer@v4.0.0
 
       - uses: actions/download-artifact@v7
         with:
@@ -244,8 +249,31 @@ jobs:
             $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect image
+        id: inspect
         env:
           IMAGE: ${{ inputs.image-name }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
+          digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest.Digest}}')
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           docker buildx imagetools inspect "${IMAGE}:${VERSION}"
+
+      - name: Sign images with cosign
+        env:
+          DIGEST: ${{ steps.inspect.outputs.digest }}
+          IMAGE: ${{ inputs.image-name }}
+        run: |
+          cosign sign --yes "${IMAGE}@${DIGEST}"
+          cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
+
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: index.docker.io/${{ inputs.image-name }}
+          subject-digest: ${{ steps.inspect.outputs.digest }}
+          push-to-registry: true
+
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ghcr.io/${{ inputs.image-name }}
+          subject-digest: ${{ steps.inspect.outputs.digest }}
+          push-to-registry: true
