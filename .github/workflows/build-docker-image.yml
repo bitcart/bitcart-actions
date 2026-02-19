@@ -254,7 +254,7 @@ jobs:
           IMAGE: ${{ inputs.image-name }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest.Digest}}')
+          digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           docker buildx imagetools inspect "${IMAGE}:${VERSION}"
 
