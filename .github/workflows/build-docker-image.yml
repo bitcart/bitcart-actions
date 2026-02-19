@@ -123,39 +123,17 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
-      - name: Create checksums file
-        env:
-          DIGEST: ${{ steps.export.outputs.platform-digest }}
-          IMAGE: ${{ inputs.image-name }}
-        run: |
-          printf '%s  index.docker.io/%s\n' "${DIGEST#sha256:}" "${IMAGE}" > "${{ runner.temp }}/checksums.txt"
-          printf '%s  ghcr.io/%s\n' "${DIGEST#sha256:}" "${IMAGE}" >> "${{ runner.temp }}/checksums.txt"
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: index.docker.io/${{ inputs.image-name }}
+          subject-digest: ${{ steps.export.outputs.platform-digest }}
+          push-to-registry: true
 
       - uses: actions/attest-build-provenance@v3
-        id: attest
         with:
-          subject-checksums: ${{ runner.temp }}/checksums.txt
-          push-to-registry: false
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: attestation-${{ env.PLATFORM_PAIR }}
-          path: ${{ steps.attest.outputs.bundle-path }}
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Attach attestation to registries
-        env:
-          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-          DIGEST: ${{ steps.export.outputs.platform-digest }}
-          IMAGE: ${{ inputs.image-name }}
-        run: |
-          cosign attach attestation \
-            --attestation "${BUNDLE}" \
-            "index.docker.io/${IMAGE}@${DIGEST}"
-          cosign attach attestation \
-            --attestation "${BUNDLE}" \
-            "ghcr.io/${IMAGE}@${DIGEST}"
+          subject-name: ghcr.io/${{ inputs.image-name }}
+          subject-digest: ${{ steps.export.outputs.platform-digest }}
+          push-to-registry: true
 
   merge:
     needs: [build-matrix]
@@ -209,8 +187,6 @@ jobs:
           digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           docker buildx imagetools inspect "${IMAGE}:${VERSION}"
-          printf '%s  index.docker.io/%s\n' "${digest#sha256:}" "${IMAGE}" > "${{ runner.temp }}/checksums.txt"
-          printf '%s  ghcr.io/%s\n' "${digest#sha256:}" "${IMAGE}" >> "${{ runner.temp }}/checksums.txt"
 
       - name: Sign images with cosign
         env:
@@ -221,20 +197,13 @@ jobs:
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
       - uses: actions/attest-build-provenance@v3
-        id: attest
         with:
-          subject-checksums: ${{ runner.temp }}/checksums.txt
-          push-to-registry: false
+          subject-name: index.docker.io/${{ inputs.image-name }}
+          subject-digest: ${{ steps.inspect.outputs.digest }}
+          push-to-registry: true
 
-      - name: Attach attestation to registries
-        env:
-          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-          DIGEST: ${{ steps.inspect.outputs.digest }}
-          IMAGE: ${{ inputs.image-name }}
-        run: |
-          cosign attach attestation \
-            --attestation "${BUNDLE}" \
-            "index.docker.io/${IMAGE}@${DIGEST}"
-          cosign attach attestation \
-            --attestation "${BUNDLE}" \
-            "ghcr.io/${IMAGE}@${DIGEST}"
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ghcr.io/${{ inputs.image-name }}
+          subject-digest: ${{ steps.inspect.outputs.digest }}
+          push-to-registry: true
