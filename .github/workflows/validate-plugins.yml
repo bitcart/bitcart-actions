@@ -9,8 +9,8 @@ on:
         default: "."
       use-go:
         description: "Install bitcart-cli via go install (requires setup-go)"
-        type: string
-        default: "true"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Go
-        if: inputs.use-go == 'true'
+        if: inputs.use-go
         uses: bitcart/bitcart-actions/actions/setup-go@master
         with:
           enable-cache: "false"
