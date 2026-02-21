@@ -29,6 +29,10 @@ on:
         default: |
           **/pyproject.toml
           **/uv.lock
+      verbose:
+        description: "Pass -v to prek run for verbose output"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -69,7 +73,7 @@ jobs:
             v1-lint-${{ github.ref_name }}-prek-
 
       - name: Run prek checks
-        run: prek run --all-files --show-diff-on-failure
+        run: prek run --all-files --show-diff-on-failure${{ inputs.verbose && ' -v' || '' }}
 
       - name: Prune prek cache
         run: |
