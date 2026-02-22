@@ -33,6 +33,10 @@ on:
         description: "Pass -v to prek run for verbose output"
         type: boolean
         default: false
+      turbo-cache:
+        description: "Cache for Turbo build system"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -50,6 +54,10 @@ jobs:
         uses: bitcart/bitcart-actions/actions/setup-node@master
         with:
           package-manager: ${{ inputs.node-package-manager }}
+
+      - name: Cache for Turbo
+        if: inputs.turbo-cache
+        uses: rharkor/caching-for-turbo@v2.3.11
 
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
