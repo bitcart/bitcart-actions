@@ -63,9 +63,10 @@ jobs:
         if: inputs.turbo-cache
         uses: rharkor/caching-for-turbo@v2.3.11
 
-      - name: Cache for Nx
+      - name: Restore Nx cache
         if: inputs.nx-cache
-        uses: actions/cache@v5
+        id: nx-cache-restore
+        uses: actions/cache/restore@v5
         with:
           path: .nx
           key: v1-nx-${{ github.ref_name }}-${{ hashFiles('nx.json') }}
@@ -99,3 +100,10 @@ jobs:
       - name: Prune prek cache
         run: |
           prek cache gc -v || echo "Failed to prune prek cache"
+
+      - name: Save Nx cache
+        if: always() && inputs.nx-cache
+        uses: actions/cache/save@v5
+        with:
+          path: .nx
+          key: ${{ steps.nx-cache-restore.outputs.cache-primary-key }}
