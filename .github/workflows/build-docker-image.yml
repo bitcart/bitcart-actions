@@ -93,11 +93,11 @@ jobs:
           dockerhub-user: ${{ inputs.dockerhub-user }}
           dockerhub-token: ${{ secrets.dockerhub-token }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - uses: sigstore/cosign-installer@v4.0.0
 
-      - uses: docker/metadata-action@v5
+      - uses: docker/metadata-action@v6
         id: meta
         with:
           images: |
@@ -105,7 +105,7 @@ jobs:
             ghcr.io/${{ inputs.image-name }}
           tags: ${{ inputs.tags }}
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         id: build
         with:
           context: ${{ inputs.context }}
@@ -133,7 +133,7 @@ jobs:
           platform_digest=$(docker buildx imagetools inspect "${IMAGE}@${digest}" --raw | jq -r '.manifests[] | select(.platform.os != "unknown") | .digest')
           echo "platform-digest=${platform_digest}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ runner.temp }}/digests/*
@@ -148,13 +148,13 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest@v4
         with:
           subject-name: index.docker.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.export.outputs.platform-digest }}
           push-to-registry: true
 
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest@v4
         with:
           subject-name: ghcr.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.export.outputs.platform-digest }}
@@ -176,7 +176,7 @@ jobs:
           dockerhub-user: ${{ inputs.dockerhub-user }}
           dockerhub-token: ${{ secrets.dockerhub-token }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - uses: sigstore/cosign-installer@v4.0.0
 
@@ -189,13 +189,13 @@ jobs:
             echo "ARTIFACT_PATTERN=digests-*" >> "$GITHUB_ENV"
           fi
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: ${{ env.ARTIFACT_PATTERN }}
           merge-multiple: true
 
-      - uses: docker/metadata-action@v5
+      - uses: docker/metadata-action@v6
         id: meta
         with:
           images: |
@@ -230,13 +230,13 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest@v4
         with:
           subject-name: index.docker.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.inspect.outputs.digest }}
           push-to-registry: true
 
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest@v4
         with:
           subject-name: ghcr.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.inspect.outputs.digest }}

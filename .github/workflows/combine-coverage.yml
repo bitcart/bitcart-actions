@@ -28,13 +28,13 @@ jobs:
         run: uv pip install coverage
 
       - name: Download all coverage data artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage-data-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: coverage-data/
 
       - name: Download all test results artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: test-results-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: test-results-all/
@@ -61,13 +61,13 @@ jobs:
           done
 
       - name: Upload combined results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: combined-coverage${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: combined-coverage/
 
       - name: Display test results
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         if: ${{ !cancelled() }}
         with:
           name: Test Results${{ inputs.os && format(' ({0})', inputs.os) || '' }}
@@ -76,7 +76,7 @@ jobs:
           fail-on-error: "false"
 
       - name: Delete intermediate artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: |
             test-results-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
