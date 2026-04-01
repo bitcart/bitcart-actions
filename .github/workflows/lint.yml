@@ -95,7 +95,7 @@ jobs:
             v1-lint-${{ github.ref_name }}-prek-
 
       - name: Run prek checks
-        run: prek run --all-files --show-diff-on-failure${{ inputs.verbose && ' -v' || '' }}
+        run: prek run --color=always --all-files --show-diff-on-failure${{ inputs.verbose && ' -v' || '' }}
 
       - name: Prune prek cache
         run: |

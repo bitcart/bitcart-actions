@@ -6,6 +6,7 @@ repos:
       - id: trailing-whitespace
       - id: mixed-line-ending
       - id: check-case-conflict
+      - id: check-shebang-scripts-are-executable
       - id: check-json
       - id: check-toml
       - id: check-yaml
@@ -18,9 +19,9 @@ repos:
       - id: zizmor
   - repo: local
     hooks:
-      - id: prettier
-        name: prettier
+      - id: oxfmt
+        name: oxfmt
         types: [text]
         language: node
         require_serial: true
-        entry: npx prettier --write --ignore-unknown
+        entry: npx oxfmt --no-error-on-unmatched-pattern
