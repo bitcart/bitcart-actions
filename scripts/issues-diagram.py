@@ -12,6 +12,7 @@ environment variables, or can be set explicitly:
     ISSUES_DIAGRAM_REPO      - repo name (fallback: GITHUB_REPOSITORY)
     ISSUES_DIAGRAM_SERVER    - server base URL (fallback: GITHUB_SERVER_URL)
     ISSUES_DIAGRAM_TOKEN     - API token (fallback: FORGEJO_TOKEN, then GITHUB_TOKEN)
+    ISSUES_DIAGRAM_OUTPUT    - output directory (default: ./scripts/output)
 """
 
 import dataclasses
@@ -592,7 +593,9 @@ def main() -> None:
     component_tree = generate_component_tree(issues, blocked, pr_map)
 
     # Write to output directory
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
+    output_dir = os.environ.get("ISSUES_DIAGRAM_OUTPUT") or os.path.join(
+        os.getcwd(), "scripts", "output"
+    )
 
     sections = [
         f"""# Open Issues
