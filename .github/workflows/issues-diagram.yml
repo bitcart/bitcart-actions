@@ -12,11 +12,6 @@ jobs:
       issues: write
 
     steps:
-      - uses: actions/checkout@v6
-        with:
-          repository: bitcart/bitcart-actions
-          persist-credentials: false
-
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
         with:
@@ -25,7 +20,7 @@ jobs:
       - name: Generate diagrams
         env:
           ISSUES_DIAGRAM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uv run scripts/issues-diagram.py
+        run: uv run https://raw.githubusercontent.com/bitcart/bitcart-actions/refs/heads/master/scripts/issues-diagram.py
 
       - name: Update issue (GitHub)
         if: ${{ contains(github.server_url, 'github.com') }}
