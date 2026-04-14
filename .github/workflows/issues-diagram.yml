@@ -4,8 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  update-diagram:
-    name: update-diagram
+  run:
     runs-on: ubuntu-latest
 
     permissions:
