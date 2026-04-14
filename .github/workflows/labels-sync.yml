@@ -1,0 +1,39 @@
+name: Sync Labels
+
+on:
+  workflow_call:
+    inputs:
+      delete-other-labels:
+        description: "Delete labels not present in the source config"
+        type: boolean
+        default: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Sync labels (GitHub)
+        if: ${{ contains(github.server_url, 'github.com') }}
+        uses: EndBug/label-sync@v2
+        with:
+          config-file: "https://raw.githubusercontent.com/bitcart/.github/master/labels.yml"
+          delete-other-labels: ${{ inputs.delete-other-labels }}
+
+      - name: Set up Python
+        if: ${{ !contains(github.server_url, 'github.com') }}
+        uses: bitcart/bitcart-actions/actions/setup-python@master
+        with:
+          cache-dependency-glob: ""
+
+      - name: Sync labels (Forgejo)
+        if: ${{ !contains(github.server_url, 'github.com') }}
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          API_URL: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}/labels
+          DELETE_OTHER: ${{ inputs.delete-other-labels }}
+        shell: bash
+        run: curl -sfL https://raw.githubusercontent.com/bitcart/bitcart-actions/refs/heads/master/scripts/forgejo-sync-labels.sh | bash
