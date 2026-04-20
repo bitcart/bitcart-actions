@@ -79,11 +79,15 @@ jobs:
           cache-dependency-glob: ${{ inputs.install-dependencies != '' && inputs.cache-dependency-glob || '' }}
 
       - name: Install dependencies
-        run: ${{ inputs.install-dependencies || 'uv pip install prek' }}
+        env:
+          INSTALL_DEPENDENCIES: ${{ inputs.install-dependencies || 'uv pip install prek' }}
+        run: bash -e -o pipefail <<< "$INSTALL_DEPENDENCIES"
 
       - name: Extra checks
         if: inputs.extra-checks != ''
-        run: ${{ inputs.extra-checks }}
+        env:
+          EXTRA_CHECKS: ${{ inputs.extra-checks }}
+        run: bash -e -o pipefail <<< "$EXTRA_CHECKS"
 
       - name: Cache prek repos
         if: inputs.cache-run-data
@@ -95,7 +99,14 @@ jobs:
             v1-lint-${{ github.ref_name }}-prek-
 
       - name: Run prek checks
-        run: prek run --color=always --all-files --show-diff-on-failure${{ inputs.verbose && ' -v' || '' }}
+        env:
+          VERBOSE: ${{ inputs.verbose }}
+        run: |
+          args=()
+          if [[ $VERBOSE == true ]]; then
+            args+=(-v)
+          fi
+          prek run --color=always --all-files --show-diff-on-failure "${args[@]}"
 
       - name: Prune prek cache
         run: |

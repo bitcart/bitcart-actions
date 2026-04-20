@@ -23,4 +23,11 @@ runs:
 
     - name: Install JS dependencies
       shell: bash
-      run: ${{ inputs.package-manager == 'pnpm' && 'pnpm install' || 'yarn install' }}
+      env:
+        PACKAGE_MANAGER: ${{ inputs.package-manager }}
+      run: |
+        if [[ $PACKAGE_MANAGER == pnpm ]]; then
+          pnpm install
+        else
+          yarn install
+        fi

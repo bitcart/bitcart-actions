@@ -30,7 +30,9 @@ runs:
     - name: Move daemon to target directory
       if: inputs.daemon-repository != ''
       shell: bash
-      run: mv __daemon ${{ inputs.daemon-dir }}
+      env:
+        DAEMON_DIR: ${{ inputs.daemon-dir }}
+      run: mv __daemon "$DAEMON_DIR"
 
     - name: Install system dependencies
       shell: bash
@@ -41,4 +43,6 @@ runs:
     - name: Install daemon dependencies
       if: inputs.install-dependencies != ''
       shell: bash
-      run: ${{ inputs.install-dependencies }}
+      env:
+        INSTALL_DEPENDENCIES: ${{ inputs.install-dependencies }}
+      run: bash -e -o pipefail <<< "$INSTALL_DEPENDENCIES"

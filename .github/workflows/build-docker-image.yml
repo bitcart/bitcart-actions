@@ -75,16 +75,18 @@ jobs:
         run: bash -e -o pipefail <<< "$SCRIPT"
 
       - name: Prepare
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          SUFFIX: ${{ matrix.suffix }}
+          PREFIX: ${{ inputs.prefix }}
         run: |
-          platform=${{ matrix.platform }}
-          platform_pair="${platform//\//-}"
+          platform_pair="${PLATFORM//\//-}"
           echo "PLATFORM_PAIR=${platform_pair}" >> "$GITHUB_ENV"
-          prefix="${{ inputs.prefix }}"
-          if [[ -n "$prefix" ]]; then
-            echo "BUILD_SCOPE=build-${prefix}-${{ matrix.suffix }}" >> "$GITHUB_ENV"
-            echo "ARTIFACT_NAME=${prefix}-digests-${platform_pair}" >> "$GITHUB_ENV"
+          if [[ -n "$PREFIX" ]]; then
+            echo "BUILD_SCOPE=build-${PREFIX}-${SUFFIX}" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=${PREFIX}-digests-${platform_pair}" >> "$GITHUB_ENV"
           else
-            echo "BUILD_SCOPE=build-${{ matrix.suffix }}" >> "$GITHUB_ENV"
+            echo "BUILD_SCOPE=build-${SUFFIX}" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=digests-${platform_pair}" >> "$GITHUB_ENV"
           fi
 
@@ -126,11 +128,12 @@ jobs:
         id: export
         env:
           IMAGE: ${{ inputs.image-name }}
+          RUNNER_TEMP: ${{ runner.temp }}
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          mkdir -p ${{ runner.temp }}/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
-          platform_digest=$(docker buildx imagetools inspect "${IMAGE}@${digest}" --raw | jq -r '.manifests[] | select(.platform.os != "unknown") | .digest')
+          mkdir -p "${RUNNER_TEMP}/digests"
+          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
+          platform_digest=$(docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --raw | jq -r '.manifests[] | select(.platform.os != "unknown") | .digest')
           echo "platform-digest=${platform_digest}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v7
@@ -181,10 +184,11 @@ jobs:
       - uses: sigstore/cosign-installer@v4.0.0
 
       - name: Prepare
+        env:
+          PREFIX: ${{ inputs.prefix }}
         run: |
-          prefix="${{ inputs.prefix }}"
-          if [[ -n "$prefix" ]]; then
-            echo "ARTIFACT_PATTERN=${prefix}-digests-*" >> "$GITHUB_ENV"
+          if [[ -n "$PREFIX" ]]; then
+            echo "ARTIFACT_PATTERN=${PREFIX}-digests-*" >> "$GITHUB_ENV"
           else
             echo "ARTIFACT_PATTERN=digests-*" >> "$GITHUB_ENV"
           fi

@@ -13,11 +13,13 @@ runs:
   steps:
     - name: Validate plugins
       shell: bash
+      env:
+        DIRECTORY: ${{ inputs.directory }}
       run: |
-        if [ -f "${{ inputs.directory }}/manifest.json" ]; then
-          bitcart-cli plugin validate "${{ inputs.directory }}"
+        if [ -f "${DIRECTORY}/manifest.json" ]; then
+          bitcart-cli plugin validate "${DIRECTORY}"
         else
-          for dir in "${{ inputs.directory }}"/*/; do
+          for dir in "${DIRECTORY}"/*/; do
             bitcart-cli plugin validate "$dir"
           done
         fi

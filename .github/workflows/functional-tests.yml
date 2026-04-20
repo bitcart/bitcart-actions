@@ -115,9 +115,11 @@ jobs:
           key: regtestln
 
       - name: Run functional tests
+        env:
+          TESTS_TARGET: ${{ inputs.tests-target }}
         run: |
           sleep 15
-          ${{ inputs.tests-target }}
+          bash -e -o pipefail <<< "$TESTS_TARGET"
 
       - name: Upload coverage to Codecov
         uses: bitcart/bitcart-actions/actions/codecov@master

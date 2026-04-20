@@ -21,9 +21,17 @@ runs:
   steps:
     - name: Set environment variables
       shell: bash
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        echo "UV_PYTHON_PREFERENCE=only-managed" >> "$GITHUB_ENV"
-        echo "PYTHON=${{ inputs.python-version }}" >> "$GITHUB_ENV"
+        if [[ ! $PYTHON_VERSION =~ ^[A-Za-z0-9.+_-]+$ ]]; then
+          echo "::error::Invalid python-version: $PYTHON_VERSION"
+          exit 1
+        fi
+        {
+          echo "UV_PYTHON_PREFERENCE=only-managed"
+          echo "PYTHON=$PYTHON_VERSION"
+        } >> "$GITHUB_ENV"
 
     - name: Set up Python ${{ inputs.python-version }}
       uses: astral-sh/setup-uv@v7

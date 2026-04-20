@@ -26,11 +26,11 @@ jobs:
         if: ${{ contains(github.server_url, 'github.com') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
 
-          REPO="${{ github.repository }}"
           LABEL_NAME="issues-diagram"
           ISSUE_TITLE="Issues diagram"
 
@@ -59,12 +59,13 @@ jobs:
         if: ${{ !contains(github.server_url, 'github.com') }}
         env:
           FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
 
-          API_BASE="${{ github.server_url }}/api/v1"
-          REPO="${{ github.repository }}"
+          API_BASE="${SERVER_URL}/api/v1"
           LABEL_NAME="issues-diagram"
           ISSUE_TITLE="Issues diagram"
           AUTH_HEADER="Authorization: token ${FORGEJO_TOKEN}"

@@ -23,6 +23,10 @@ import sys
 import httpx  # type: ignore
 
 
+def _is_github_host(url: str) -> bool:
+    return url == "https://github.com" or url.startswith("https://github.com/")
+
+
 @dataclasses.dataclass(frozen=True)
 class PlatformConfig:
     platform: str  # "forgejo" | "github"
@@ -62,7 +66,7 @@ def detect_config() -> PlatformConfig:
         "GITHUB_SERVER_URL", ""
     )
     if not platform:
-        if server and "github.com" in server:
+        if server and _is_github_host(server):
             platform = "github"
         else:
             platform = "forgejo"
