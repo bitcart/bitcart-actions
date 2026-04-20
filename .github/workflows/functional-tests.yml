@@ -40,6 +40,7 @@ permissions:
 
 jobs:
   run:
+    name: run
     runs-on: ubuntu-latest
 
     services:

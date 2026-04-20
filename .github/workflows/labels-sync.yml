@@ -8,12 +8,15 @@ on:
         type: boolean
         default: true
 
+permissions: {}
+
 jobs:
   run:
+    name: run
     runs-on: ubuntu-latest
 
     permissions:
-      issues: write
+      issues: write # to synchronize issue labels
 
     steps:
       - name: Sync labels (GitHub)

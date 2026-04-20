@@ -47,6 +47,7 @@ permissions:
 
 jobs:
   run:
+    name: run
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

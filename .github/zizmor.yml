@@ -3,3 +3,6 @@ rules:
     config:
       policies:
         "*": ref-pin
+  unpinned-images: # TODO: remove when enabling pinning
+    ignore:
+      - functional-tests.yml

@@ -48,10 +48,10 @@ jobs:
     name: build-matrix-${{ matrix.suffix }}
     permissions:
       contents: read
-      packages: write
-      id-token: write
-      attestations: write
-      artifact-metadata: write
+      packages: write # publishing to GHCR
+      id-token: write # OIDC for provenance
+      attestations: write # github attestations
+      artifact-metadata: write # artifact storage metadata (recommended by actions/attest)
     strategy:
       fail-fast: false
       matrix:
@@ -168,14 +168,15 @@ jobs:
           push-to-registry: true
 
   merge:
+    name: merge
     needs: [build-matrix]
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
-      id-token: write
-      attestations: write
-      artifact-metadata: write
+      packages: write # publishing to GHCR
+      id-token: write # OIDC for provenance
+      attestations: write # github attestations
+      artifact-metadata: write # artifact storage metadata (recommended by actions/attest)
 
     steps:
       - uses: bitcart/bitcart-actions/actions/login-to-registries@master

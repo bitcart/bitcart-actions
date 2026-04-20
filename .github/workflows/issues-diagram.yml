@@ -3,13 +3,15 @@ name: Issues Diagram
 on:
   workflow_call:
 
+permissions: {}
+
 jobs:
   run:
+    name: run
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
-      issues: write
+      issues: write # to create issues diagram
 
     steps:
       - name: Set up Python

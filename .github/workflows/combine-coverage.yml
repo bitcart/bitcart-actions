@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   run:
+    name: run
     runs-on: ${{ inputs.os || 'ubuntu-latest' }}
     if: ${{ !cancelled() }}
 

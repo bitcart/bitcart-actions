@@ -13,17 +13,23 @@ on:
         required: false
         type: boolean
         default: true
+      persona:
+        description: "Zizmor persona (regular, pedantic, auditor)"
+        required: false
+        type: string
+        default: "auditor"
 
 permissions:
   contents: read
 
 jobs:
   run:
+    name: run
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-      security-events: write
+      security-events: write # needed for github advanced security
 
     steps:
       - uses: actions/checkout@v6
@@ -35,3 +41,4 @@ jobs:
         with:
           inputs: ${{ inputs.paths }}
           advanced-security: ${{ inputs.advanced-security }}
+          persona: ${{ inputs.persona }}
