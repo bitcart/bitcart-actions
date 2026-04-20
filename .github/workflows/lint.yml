@@ -61,7 +61,7 @@ jobs:
 
       - name: Cache for Turbo
         if: inputs.turbo-cache
-        uses: rharkor/caching-for-turbo@v2.3.11
+        uses: rharkor/caching-for-turbo@v2.3.13
 
       - name: Restore Nx cache
         if: inputs.nx-cache
