@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   run:
-    name: run
+    name: validate-plugins
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

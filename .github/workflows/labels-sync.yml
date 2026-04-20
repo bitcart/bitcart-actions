@@ -12,7 +12,7 @@ permissions: {}
 
 jobs:
   run:
-    name: run
+    name: labels-sync
     runs-on: ubuntu-latest
 
     permissions:

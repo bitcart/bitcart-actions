@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   run:
-    name: run
+    name: combine-coverage
     runs-on: ${{ inputs.os || 'ubuntu-latest' }}
     if: ${{ !cancelled() }}
 

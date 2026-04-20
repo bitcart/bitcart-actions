@@ -7,7 +7,7 @@ permissions: {}
 
 jobs:
   run:
-    name: run
+    name: issues-diagram
     runs-on: ubuntu-latest
 
     permissions:
