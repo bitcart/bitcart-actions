@@ -40,7 +40,7 @@ permissions:
 
 jobs:
   run:
-    name: functional-tests
+    name: run
     runs-on: ubuntu-latest
 
     services:

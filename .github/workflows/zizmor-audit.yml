@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   run:
-    name: zizmor
+    name: run
     runs-on: ubuntu-latest
 
     permissions:
