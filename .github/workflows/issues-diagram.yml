@@ -18,6 +18,7 @@ jobs:
         uses: bitcart/bitcart-actions/actions/setup-python@master
         with:
           cache-dependency-glob: ""
+          ignore-empty-workdir: "true"
 
       - name: Generate diagrams
         env:

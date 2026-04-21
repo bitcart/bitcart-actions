@@ -15,6 +15,9 @@ inputs:
   enable-cache:
     description: "Whether to enable caching of the Python environment. Set to false to disable caching."
     default: "true"
+  ignore-empty-workdir:
+    description: "Suppress warning when the working directory is empty."
+    default: "false"
 
 runs:
   using: composite
@@ -39,5 +42,6 @@ runs:
         python-version: ${{ inputs.python-version }}
         cache-dependency-glob: ${{ inputs.cache-dependency-glob }}
         enable-cache: ${{ inputs.enable-cache }}
+        ignore-empty-workdir: ${{ inputs.ignore-empty-workdir }}
         activate-environment: true
         add-problem-matchers: false
