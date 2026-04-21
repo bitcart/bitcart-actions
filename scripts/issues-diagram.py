@@ -143,8 +143,9 @@ ISSUE_REF_RE = re.compile(r"#(\d+)")
 MERMAID_CLASSES = """\
   classDef blocked fill:#f5f5f5,stroke:#999,color:#999,stroke-dasharray:5 5
   classDef blocked_ext fill:#fff8e1,stroke:#f9a825,color:#f57f17,stroke-dasharray:5 5
-  classDef assigned fill:#e8f4fd,stroke:#0969da
-  classDef actionable fill:#d4edda,stroke:#28a745"""
+  classDef assigned fill:#e8f4fd,stroke:#0969da,color:#0b2545
+  classDef actionable fill:#d4edda,stroke:#28a745,color:#11341c
+  classDef group fill:#e5e7eb,stroke:#6b7280,color:#111827"""
 
 
 def fetch_all_issues(cfg: PlatformConfig) -> list[dict]:
@@ -429,7 +430,7 @@ def generate_priority_tree(
     for priority in non_empty:
         group_id = to_node_id(priority)
         display = PRIORITY_DISPLAY[priority]
-        lines.append(f'  {group_id}(("{display}"))')
+        lines.append(f'  {group_id}(("{display}")):::group')
         for issue in groups[priority]:
             node_id = f"i{issue['number']}"
             tag = type_tag(issue)
@@ -476,7 +477,7 @@ def generate_component_tree(
         comp_id = "comp_" + to_node_id(comp)
         comp_ids.append(comp_id)
         display = comp.replace("/", " / ")
-        lines.append(f'  {comp_id}(("{display} ({len(items)})"))')
+        lines.append(f'  {comp_id}(("{display} ({len(items)})")):::group')
         for issue in items:
             node_id = f"i{issue['number']}"
             tag = type_tag(issue)
