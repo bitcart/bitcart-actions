@@ -64,7 +64,7 @@ jobs:
             suffix: arm64
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -99,11 +99,11 @@ jobs:
           dockerhub-user: ${{ inputs.dockerhub-user }}
           dockerhub-token: ${{ secrets.dockerhub-token }}
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
-      - uses: sigstore/cosign-installer@v4.1.1
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
         id: meta
         with:
           images: |
@@ -111,7 +111,7 @@ jobs:
             ghcr.io/${{ inputs.image-name }}
           tags: ${{ inputs.tags }}
 
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         id: build
         with:
           context: ${{ inputs.context }}
@@ -140,7 +140,7 @@ jobs:
           platform_digest=$(docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --raw | jq -r '.manifests[] | select(.platform.os != "unknown") | .digest')
           echo "platform-digest=${platform_digest}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ steps.prepare.outputs.artifact-name }}
           path: ${{ runner.temp }}/digests/*
@@ -155,13 +155,13 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
-      - uses: actions/attest@v4
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
           subject-name: index.docker.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.export.outputs.platform-digest }}
           push-to-registry: true
 
-      - uses: actions/attest@v4
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
           subject-name: ghcr.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.export.outputs.platform-digest }}
@@ -184,9 +184,9 @@ jobs:
           dockerhub-user: ${{ inputs.dockerhub-user }}
           dockerhub-token: ${{ secrets.dockerhub-token }}
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
-      - uses: sigstore/cosign-installer@v4.1.1
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Prepare
         id: prepare
@@ -200,13 +200,13 @@ jobs:
           fi
           echo "artifact-pattern=${pattern}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: ${{ steps.prepare.outputs.artifact-pattern }}
           merge-multiple: true
 
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
         id: meta
         with:
           images: |
@@ -241,13 +241,13 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign sign --yes "ghcr.io/${IMAGE}@${DIGEST}"
 
-      - uses: actions/attest@v4
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
           subject-name: index.docker.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.inspect.outputs.digest }}
           push-to-registry: true
 
-      - uses: actions/attest@v4
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
           subject-name: ghcr.io/${{ inputs.image-name }}
           subject-digest: ${{ steps.inspect.outputs.digest }}

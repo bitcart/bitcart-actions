@@ -18,7 +18,7 @@ jobs:
     if: ${{ !cancelled() }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -29,13 +29,13 @@ jobs:
         run: uv pip install coverage
 
       - name: Download all coverage data artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: coverage-data-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: coverage-data/
 
       - name: Download all test results artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: test-results-*${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: test-results-all/
@@ -62,13 +62,13 @@ jobs:
           done
 
       - name: Upload combined results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: combined-coverage${{ inputs.os && format('-{0}', inputs.os) || '' }}
           path: combined-coverage/
 
       - name: Display test results
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3
         if: ${{ !cancelled() }}
         with:
           name: Test Results${{ inputs.os && format(' ({0})', inputs.os) || '' }}
@@ -77,7 +77,7 @@ jobs:
           fail-on-error: "false"
 
       - name: Delete intermediate artifacts
-        uses: geekyeggo/delete-artifact@v6
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6
         with:
           name: |
             test-results-*${{ inputs.os && format('-{0}', inputs.os) || '' }}

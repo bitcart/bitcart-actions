@@ -38,7 +38,7 @@ runs:
 
     - name: Upload coverage
       if: ${{ inputs.upload_coverage == 'true' }}
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
@@ -49,7 +49,7 @@ runs:
 
     - name: Upload test results to Codecov
       if: ${{ !cancelled() }}
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
       with:
         token: ${{ inputs.token }}
         name: ${{ inputs.name }}
