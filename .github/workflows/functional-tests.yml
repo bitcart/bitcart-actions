@@ -45,11 +45,13 @@ jobs:
 
     services:
       redis:
+        # renovate: datasource=docker depName=redis versioning=docker
         image: ${{ inputs.enable-redis && 'redis:alpine' || '' }}
         ports:
           - 6379:6379
 
       postgres:
+        # renovate: datasource=docker depName=postgres versioning=docker
         image: ${{ inputs.enable-postgres && 'postgres:18-alpine' || '' }}
         env:
           POSTGRES_DB: bitcart_test

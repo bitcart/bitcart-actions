@@ -1,4 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>bitcart/renovate-config"]
+  "extends": ["local>bitcart/renovate-config"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?\\s+[^\\n]*'[^:']+:(?<currentValue>[^'@]+)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?'"
+      ]
+    }
+  ]
 }
