@@ -27,7 +27,7 @@ runs:
         PACKAGE_MANAGER: ${{ inputs.package-manager }}
       run: |
         if [[ $PACKAGE_MANAGER == pnpm ]]; then
-          pnpm install
+          pnpm install --frozen-lockfile
         else
-          yarn install
+          yarn install --frozen-lockfile
         fi
