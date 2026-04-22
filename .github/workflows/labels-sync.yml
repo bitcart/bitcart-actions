@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Sync labels (GitHub)
         if: ${{ contains(github.server_url, 'github.com') }}
-        uses: EndBug/label-sync@v2
+        uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a # v2
         with:
           config-file: "https://raw.githubusercontent.com/bitcart/.github/master/labels.yml"
           delete-other-labels: ${{ inputs.delete-other-labels }}
