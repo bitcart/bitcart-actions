@@ -3,6 +3,3 @@ rules:
     config:
       policies:
         "bitcart/*": ref-pin
-  unpinned-images: # TODO: remove when enabling pinning
-    ignore:
-      - functional-tests.yml
