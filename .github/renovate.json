@@ -6,9 +6,9 @@
       "customType": "regex",
       "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
       "matchStrings": [
-        "# renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?(?<indentation>\\s+)(?<prefix>[^\\n]*?)'[^:'\\n]+:(?<currentValue>[^'@\\n]+)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?'"
+        "# renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?(?<prefix>\\s+[^\\n]*?)'[^:'\\n]+:(?<currentValue>[^'@\\n]+)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?'"
       ],
-      "autoReplaceStringTemplate": "# renovate: datasource={{{datasource}}} depName={{{depName}}}{{#if versioning}} versioning={{{versioning}}}{{/if}}{{{indentation}}}{{{prefix}}}'{{{depName}}}:{{{newValue}}}{{#if newDigest}}@{{{newDigest}}}{{/if}}'"
+      "autoReplaceStringTemplate": "# renovate: datasource={{{datasource}}} depName={{{depName}}}{{#if versioning}} versioning={{{versioning}}}{{/if}}{{{prefix}}}'{{{depName}}}:{{{newValue}}}{{#if newDigest}}@{{{newDigest}}}{{/if}}'"
     }
   ]
 }
