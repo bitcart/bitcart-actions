@@ -1,0 +1,82 @@
+name: Configure fast APT mirror
+description: Picks a fast APT mirror without the upstream ACT gate, so it works under act-based runners.
+
+inputs:
+  ref:
+    description: vegardit/fast-apt-mirror.sh git ref (tag, branch, or commit SHA) to fetch the script from.
+    default: c02f624f2c4108687b16f980a2c9e10d82bdace6
+  healthchecks:
+    description: Number of mirrors to check for availability and up-to-dateness.
+    default: "20"
+  speedtests:
+    description: Maximum number of healthy mirrors to test for speed.
+    default: "10"
+  parallel:
+    description: Number of parallel speed tests.
+    default: "2"
+  sample-size:
+    description: Number of kilobytes to download from each mirror during the speed test.
+    default: "1024"
+  sample-time:
+    description: Maximum number of seconds within which the sample download must finish.
+    default: "3"
+  exclude-current:
+    description: Don't include the current APT mirror in the speed tests.
+    default: "false"
+  country:
+    description: Country code to use for selecting mirrors (Ubuntu only).
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Configure fast APT mirror
+      shell: bash
+      env:
+        INPUT_REF: ${{ inputs.ref }}
+        INPUT_HEALTHCHECKS: ${{ inputs.healthchecks }}
+        INPUT_SPEEDTESTS: ${{ inputs.speedtests }}
+        INPUT_PARALLEL: ${{ inputs.parallel }}
+        INPUT_SAMPLE_SIZE: ${{ inputs.sample-size }}
+        INPUT_SAMPLE_TIME: ${{ inputs.sample-time }}
+        INPUT_COUNTRY: ${{ inputs.country }}
+        INPUT_EXCLUDE_CURRENT: ${{ inputs.exclude-current }}
+      run: |
+        set -euo pipefail
+        echo "::group::Configure fast APT mirror"
+
+        if ! command -v sudo >/dev/null 2>&1; then
+          echo "Required command 'sudo' is not available" >&2
+          exit 1
+        fi
+
+        echo 'APT::Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-acquire-retries
+
+        script_url="https://raw.githubusercontent.com/vegardit/fast-apt-mirror.sh/${INPUT_REF}/fast-apt-mirror.sh"
+        curl -fsSL "$script_url" -o /tmp/fast-apt-mirror.sh
+        chmod +x /tmp/fast-apt-mirror.sh
+
+        find_args=(
+          --apply
+          --verbose
+          --healthchecks "$INPUT_HEALTHCHECKS"
+          --ignore-sync-state
+          --speedtests   "$INPUT_SPEEDTESTS"
+          --parallel     "$INPUT_PARALLEL"
+          --sample-size  "$INPUT_SAMPLE_SIZE"
+          --sample-time  "$INPUT_SAMPLE_TIME"
+        )
+        if [[ -n "$INPUT_COUNTRY" ]]; then
+          find_args+=(--country "$INPUT_COUNTRY")
+        fi
+        if [[ "$INPUT_EXCLUDE_CURRENT" == 'true' ]]; then
+          find_args+=(--exclude-current)
+        fi
+
+        sudo bash /tmp/fast-apt-mirror.sh find "${find_args[@]}" || true
+
+        if [[ ! -e /var/lib/apt/lists/partial ]] || [[ $(( $(date +%s) - $(sudo date +%s -r /var/lib/apt/lists/partial) )) -gt 3600 ]]; then
+          (set -x; sudo apt-get update)
+        fi
+
+        echo "::endgroup::"
