@@ -30,11 +30,18 @@ runs:
       if: steps.check.outputs.has-package-json == 'true' && inputs.package-manager == 'pnpm'
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
-    - name: Install Node.js
+    - name: Install Node.js (from .nvmrc)
+      if: steps.check.outputs.has-nvmrc == 'true'
       uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
-        node-version-file: ${{ steps.check.outputs.has-nvmrc == 'true' && '.nvmrc' || '' }}
-        node-version: ${{ steps.check.outputs.has-nvmrc == 'true' && '' || '24' }}
+        node-version-file: ".nvmrc"
+        cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.package-manager || '' }}
+
+    - name: Install Node.js (default)
+      if: steps.check.outputs.has-nvmrc != 'true'
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: "24"
         cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.package-manager || '' }}
 
     - name: Install JS dependencies
