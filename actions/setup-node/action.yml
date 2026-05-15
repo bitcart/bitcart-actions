@@ -28,7 +28,7 @@ runs:
 
     - name: Install pnpm
       if: steps.check.outputs.has-package-json == 'true' && inputs.package-manager == 'pnpm'
-      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
 
     - name: Install Node.js (from .nvmrc)
       if: steps.check.outputs.has-nvmrc == 'true'
