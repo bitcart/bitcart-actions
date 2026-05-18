@@ -7,6 +7,10 @@ inputs:
     description: "Suffix for artifact names"
     required: false
     default: ""
+  runs-on:
+    description: "Runner label to append to artifact names (matches combine-coverage filter)"
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -14,18 +18,18 @@ runs:
     - name: Upload test results
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: test-results${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
+        name: test-results${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}${{ inputs.runs-on != '' && format('-{0}', inputs.runs-on) || '' }}
         path: test-results/
 
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: coverage${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
+        name: coverage${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}${{ inputs.runs-on != '' && format('-{0}', inputs.runs-on) || '' }}
         path: coverage/
 
     - name: Upload coverage data
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: coverage-data${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}
+        name: coverage-data${{ inputs.suffix != '' && format('-{0}', inputs.suffix) || '' }}${{ inputs.runs-on != '' && format('-{0}', inputs.runs-on) || '' }}
         path: .coverage
         include-hidden-files: true
