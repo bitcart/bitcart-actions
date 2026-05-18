@@ -31,6 +31,10 @@ on:
         description: "Enable PostgreSQL service"
         type: boolean
         default: false
+      runs-on:
+        description: "Runner label to run the job on"
+        type: string
+        default: "ubuntu-latest"
     secrets:
       CODECOV_TOKEN:
         required: true
@@ -41,7 +45,7 @@ permissions:
 jobs:
   run:
     name: run
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     services:
       redis:

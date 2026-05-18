@@ -5,19 +5,20 @@ on:
     inputs:
       paths:
         description: "The paths to run the audit on"
-        required: false
         type: string
         default: "."
       advanced-security:
         description: "Whether to enable advanced security features (github only)"
-        required: false
         type: boolean
         default: true
       persona:
         description: "Zizmor persona (regular, pedantic, auditor)"
-        required: false
         type: string
         default: "auditor"
+      runs-on:
+        description: "Runner label to run the job on"
+        type: string
+        default: "ubuntu-latest"
 
 permissions:
   contents: read
@@ -25,7 +26,7 @@ permissions:
 jobs:
   run:
     name: run
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     permissions:
       contents: read

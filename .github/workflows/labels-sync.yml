@@ -7,13 +7,17 @@ on:
         description: "Delete labels not present in the source config"
         type: boolean
         default: true
+      runs-on:
+        description: "Runner label to run the job on"
+        type: string
+        default: "ubuntu-latest"
 
 permissions: {}
 
 jobs:
   run:
     name: run
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
 
     permissions:
       issues: write # to synchronize issue labels

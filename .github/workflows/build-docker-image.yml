@@ -14,12 +14,10 @@ on:
       context:
         description: "Docker build context path"
         type: string
-        required: false
         default: "."
       tags:
         description: "Tags configuration passed to docker/metadata-action (multiline)"
         type: string
-        required: false
         default: ""
       dockerhub-user:
         description: "Docker Hub username"
@@ -28,13 +26,23 @@ on:
       pre-build-script:
         description: "Optional bash script to run after checkout, before building"
         type: string
-        required: false
         default: ""
       prefix:
         description: "Prefix for artifact names and cache scopes, useful when called from a matrix job"
         type: string
-        required: false
         default: ""
+      amd64-runs-on:
+        description: "Runner label for the linux/amd64 build job"
+        type: string
+        default: "ubuntu-latest"
+      arm64-runs-on:
+        description: "Runner label for the linux/arm64 build job"
+        type: string
+        default: "ubuntu-24.04-arm"
+      merge-runs-on:
+        description: "Runner label for the merge job"
+        type: string
+        default: "ubuntu-latest"
     secrets:
       dockerhub-token:
         required: true
@@ -56,10 +64,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-latest
+          - runner: ${{ inputs.amd64-runs-on }}
             platform: linux/amd64
             suffix: amd64
-          - runner: ubuntu-24.04-arm
+          - runner: ${{ inputs.arm64-runs-on }}
             platform: linux/arm64
             suffix: arm64
 
@@ -170,7 +178,7 @@ jobs:
   merge:
     name: merge
     needs: [build-matrix]
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.merge-runs-on }}
     permissions:
       contents: read
       packages: write # publishing to GHCR
@@ -219,9 +227,15 @@ jobs:
         env:
           IMAGE: ${{ inputs.image-name }}
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf "${IMAGE}@sha256:%s " *)
+          tag_args=()
+          while IFS= read -r tag; do
+            tag_args+=(-t "$tag")
+          done < <(jq -cr '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          digest_args=()
+          for f in *; do
+            digest_args+=("${IMAGE}@sha256:${f}")
+          done
+          docker buildx imagetools create "${tag_args[@]}" "${digest_args[@]}"
 
       - name: Inspect image
         id: inspect
