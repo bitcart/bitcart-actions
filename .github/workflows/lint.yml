@@ -54,7 +54,7 @@ jobs:
     name: run
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
@@ -66,12 +66,12 @@ jobs:
 
       - name: Cache for Turbo
         if: inputs.turbo-cache
-        uses: rharkor/caching-for-turbo@56219402aacc0d06b650d898c222996dbc1191ec # v2.3.14
+        uses: rharkor/caching-for-turbo@2238fae6eb9a9936f92356f54cb3660200d105e7 # v2.5.1
 
       - name: Restore Nx cache
         if: inputs.nx-cache
         id: nx-cache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: .nx
           key: v1-nx-${{ github.ref_name }}-${{ hashFiles('nx.json') }}
@@ -96,7 +96,7 @@ jobs:
 
       - name: Cache prek repos
         if: inputs.cache-run-data
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cache/prek
           key: v1-lint-${{ github.ref_name }}-prek-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -119,7 +119,7 @@ jobs:
 
       - name: Save Nx cache
         if: always() && inputs.nx-cache
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: .nx
           key: ${{ steps.nx-cache-restore.outputs.cache-primary-key }}
