@@ -37,7 +37,7 @@ runs:
       if: steps.check.outputs.uses-pnpm == 'true'
       uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
       with:
-        runtime: ${{ steps.check.outputs.has-nvmrc != 'true' && 'node@24' || '' }}
+        runtime: ${{ steps.check.outputs.has-nvmrc != 'true' && 'node@26' || '' }}
         cache: true
         require-lockfile: true
 
@@ -52,7 +52,7 @@ runs:
       if: steps.check.outputs.uses-pnpm != 'true' && steps.check.outputs.has-nvmrc != 'true'
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
-        node-version: "24"
+        node-version: "26"
         cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.package-manager || '' }}
 
     - name: Install JS dependencies
