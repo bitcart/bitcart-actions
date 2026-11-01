@@ -1,4 +1,4 @@
-"""Enforce a consistent key order, blank-line layout and permission comments in GitHub/Forgejo workflow files."""
+"""Enforce Bitcart conventions in GitHub/Forgejo workflow files and zizmor config."""
 
 import argparse
 import difflib
@@ -99,7 +99,16 @@ DEFAULT_GLOBS = [
     ".github/workflows/*.yaml",
     ".forgejo/workflows/*.yml",
     ".forgejo/workflows/*.yaml",
+    ".github/zizmor.yml",
+    ".forgejo/zizmor.yml",
 ]
+ZIZMOR_CONFIG = """\
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "bitcart/*": ref-pin
+"""
 
 
 class LayoutError(Exception):
@@ -345,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
         "files",
         nargs="*",
         type=Path,
-        help="workflow files (default: .github/workflows and .forgejo/workflows)",
+        help="workflow and zizmor files (default: under .github and .forgejo)",
     )
     parser.add_argument(
         "--check",
@@ -356,11 +365,18 @@ def main(argv: list[str] | None = None) -> int:
     files = args.files or sorted(
         p for pattern in DEFAULT_GLOBS for p in Path().glob(pattern)
     )
+    zizmor_config = Path(".github/zizmor.yml")
+    has_github_workflows = any(p.parent == Path(".github/workflows") for p in files)
+    if not args.files and has_github_workflows and zizmor_config not in files:
+        files.append(zizmor_config)
     status = 0
     for path in files:
-        text = path.read_text()
+        text = path.read_text() if path.exists() else ""
         try:
-            new = layout(text, str(path))
+            is_zizmor_config = (
+                path.name == "zizmor.yml" and path.parent.name != "workflows"
+            )
+            new = ZIZMOR_CONFIG if is_zizmor_config else layout(text, str(path))
         except LayoutError as e:
             print(f"error: {e}", file=sys.stderr)
             status = 2
