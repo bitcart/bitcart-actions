@@ -267,6 +267,14 @@ class Audit:
                 f"sha_pinning_required={aperm.get('sha_pinning_required')}"
             )
 
+        immutable = self.api(f"/orgs/{self.org}/settings/immutable-releases")
+        if not isinstance(immutable, dict):
+            self.skipped("Org immutable releases policy")
+        else:
+            self.plain(
+                f"Immutable releases: enforced_repositories={immutable.get('enforced_repositories')}"
+            )
+
         wperm = self.api(f"/orgs/{self.org}/actions/permissions/workflow")
         if not isinstance(wperm, dict):
             self.skipped("Org workflow permissions")
@@ -849,10 +857,18 @@ class Audit:
             if isinstance(config, dict)
             else "none"
         )
+        immutable = self.api(f"/repos/{full}/immutable-releases")
+        if not isinstance(immutable, dict):
+            immutable_releases = "?"
+        elif immutable.get("enforced_by_owner"):
+            immutable_releases = "enforced by org"
+        else:
+            immutable_releases = str(immutable.get("enabled")).lower()
 
         self.plain(
             f"security_configuration={config_name}  dependabot_alerts={alerts_enabled}  "
-            f"secret_scanning={scanning}  push_protection={push_protection}"
+            f"secret_scanning={scanning}  push_protection={push_protection}  "
+            f"immutable_releases={immutable_releases}"
         )
         self.plain(
             f"allow_forking={meta.get('allow_forking')}  "
