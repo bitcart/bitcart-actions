@@ -121,12 +121,15 @@ jobs:
           daemon-dir: ${{ inputs.daemon-dir }}
           install-dependencies: ${{ inputs.install-dependencies }}
 
-      - name: Install regtest utils
+      - name: Install screen
         if: ${{ inputs.regtest }}
         run: |
-          sudo add-apt-repository -y ppa:luke-jr/bitcoincore
           sudo apt update
-          sudo apt install -y bitcoind screen
+          sudo apt install -y screen
+
+      - name: Install bitcoind
+        if: ${{ inputs.regtest }}
+        uses: bitcart/bitcart-actions/actions/install-bitcoind@master
 
       - name: Install Fulcrum
         if: ${{ inputs.regtest }}
