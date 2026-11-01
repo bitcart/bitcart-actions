@@ -1,16 +1,20 @@
-name: Functional Tests
+name: Python Tests
 
 on:
   workflow_call:
     inputs:
-      tests-target:
-        description: "Tests target to run"
+      python-versions:
+        description: "JSON list of Python versions to test on"
         type: string
-        default: "just functional"
-      daemon-dir:
-        description: "Daemon directory"
+        default: '["3.12"]'
+      install-dependencies:
+        description: "Command to install dependencies"
         type: string
-        default: "."
+        default: "uv sync --frozen --compile-bytecode"
+      install-daemon:
+        description: "Install the Bitcart daemon and its system dependencies"
+        type: boolean
+        default: false
       daemon-repository:
         description: "Extra repository to checkout as daemon"
         type: string
@@ -19,16 +23,36 @@ on:
         description: "Branch of the daemon repository to checkout"
         type: string
         default: ""
-      install-dependencies:
-        description: "Command to install dependencies"
+      daemon-dir:
+        description: "Daemon directory, exposed to commands as $DAEMON_DIR"
+        type: string
+        default: "."
+      background:
+        description: "Command to keep running in the background during the tests"
         type: string
         default: ""
-      enable-redis:
-        description: "Enable Redis service"
+      regtest:
+        description: "Start bitcoind, Fulcrum and the regtest daemons before the tests"
         type: boolean
         default: false
-      enable-postgres:
-        description: "Enable PostgreSQL service"
+      tests:
+        description: "Command to run the tests"
+        type: string
+        default: "just ci"
+      coverage-name:
+        description: "Codecov upload name, suffixed with the Python version"
+        type: string
+        default: "Tests"
+      coverage-flag:
+        description: "Codecov flag, also used in artifact names"
+        type: string
+        default: "tests"
+      redis:
+        description: "Start Redis on port 6379"
+        type: boolean
+        default: false
+      postgres:
+        description: "Start PostgreSQL on port 5432, with trust authentication"
         type: boolean
         default: false
       runs-on:
@@ -41,23 +65,27 @@ permissions:
 
 jobs:
   run:
-    name: run
+    name: ${{ matrix.python-version }}
     runs-on: ${{ inputs.runs-on }}
 
     permissions:
       contents: read
       id-token: write # OIDC token for codecov uploads
 
+    strategy:
+      matrix:
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+
     services:
       redis:
         # renovate: datasource=docker depName=redis versioning=docker
-        image: ${{ inputs.enable-redis && 'redis:alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537' || '' }}
+        image: ${{ inputs.redis && 'redis:alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537' || '' }}
         ports:
           - 6379:6379
 
       postgres:
         # renovate: datasource=docker depName=postgres versioning=docker
-        image: ${{ inputs.enable-postgres && 'postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5' || '' }}
+        image: ${{ inputs.postgres && 'postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5' || '' }}
         env:
           POSTGRES_DB: bitcart_test
           POSTGRES_HOST_AUTH_METHOD: trust
@@ -66,16 +94,26 @@ jobs:
 
     env:
       TEST_ARGS: "-o junit_family=legacy --junitxml test-results/junit.xml --cov-report html:coverage"
+      DAEMON_DIR: ${{ inputs.daemon-dir }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: bitcart/bitcart-actions/actions/setup-python@master
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        if: ${{ !inputs.install-daemon }}
+        env:
+          INSTALL_DEPENDENCIES: ${{ inputs.install-dependencies }}
+        run: bash -e -o pipefail <<< "$INSTALL_DEPENDENCIES"
 
       - name: Install daemon
+        if: ${{ inputs.install-daemon }}
         uses: bitcart/bitcart-actions/actions/install-daemon@master
         with:
           daemon-repository: ${{ inputs.daemon-repository }}
@@ -84,57 +122,66 @@ jobs:
           install-dependencies: ${{ inputs.install-dependencies }}
 
       - name: Install regtest utils
+        if: ${{ inputs.regtest }}
         run: |
           sudo add-apt-repository -y ppa:luke-jr/bitcoincore
           sudo apt update
           sudo apt install -y bitcoind screen
 
       - name: Install Fulcrum
+        if: ${{ inputs.regtest }}
         uses: bitcart/bitcart-actions/actions/install-fulcrum@master
 
       - name: Start bitcoind
+        if: ${{ inputs.regtest }}
         uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
           run: just bitcoind
           key: bitcoind
 
       - name: Start Fulcrum
+        if: ${{ inputs.regtest }}
         uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
           run: sleep 10 && just fulcrum
           key: fulcrum
 
       - name: Start regtest daemon
+        if: ${{ inputs.regtest }}
         uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
-          run: |
-            sleep 10
-            cd ${{ inputs.daemon-dir }}
-            just regtest
+          run: sleep 10 && cd "$DAEMON_DIR" && just regtest
           key: regtest
 
       - name: Start regtest LN daemon
+        if: ${{ inputs.regtest }}
         uses: bitcart/bitcart-actions/actions/run-in-background@master
         with:
-          run: |
-            sleep 10
-            cd ${{ inputs.daemon-dir }}
-            just regtestln
+          run: sleep 10 && cd "$DAEMON_DIR" && just regtestln
           key: regtestln
 
-      - name: Run functional tests
+      - name: Start background command
+        if: ${{ inputs.background != '' }}
+        uses: bitcart/bitcart-actions/actions/run-in-background@master
+        with:
+          run: ${{ inputs.background }}
+          key: background
+
+      - name: Wait for regtest daemons
+        if: ${{ inputs.regtest }}
+        run: sleep 15
+
+      - name: Run tests
         env:
-          TESTS_TARGET: ${{ inputs.tests-target }}
-        run: |
-          sleep 15
-          bash -e -o pipefail <<< "$TESTS_TARGET"
+          TESTS: ${{ inputs.tests }}
+        run: bash -e -o pipefail <<< "$TESTS"
 
       - name: Upload coverage to Codecov
         uses: bitcart/bitcart-actions/actions/codecov@master
         if: ${{ !cancelled() }}
         with:
-          name: Functional Tests - Python ${{ env.PYTHON }}
-          flags: functional-tests
+          name: ${{ inputs.coverage-name }} - Python ${{ env.PYTHON }}
+          flags: ${{ inputs.coverage-flag }}
           env_vars: PYTHON
           upload_coverage: ${{ job.status == 'success' }}
 
@@ -142,4 +189,4 @@ jobs:
         uses: bitcart/bitcart-actions/actions/upload-test-results@master
         if: ${{ !cancelled() }}
         with:
-          suffix: functional
+          suffix: ${{ inputs.coverage-flag }}-py${{ env.PYTHON }}
