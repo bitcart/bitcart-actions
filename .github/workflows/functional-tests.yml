@@ -35,9 +35,6 @@ on:
         description: "Runner label to run the job on"
         type: string
         default: "ubuntu-latest"
-    secrets:
-      CODECOV_TOKEN:
-        required: false
 
 permissions:
   contents: read
@@ -136,7 +133,6 @@ jobs:
         uses: bitcart/bitcart-actions/actions/codecov@master
         if: ${{ !cancelled() }}
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           name: Functional Tests - Python ${{ env.PYTHON }}
           flags: functional-tests
           env_vars: PYTHON
