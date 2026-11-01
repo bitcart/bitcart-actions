@@ -1,0 +1,21 @@
+name: "Workflow layout"
+
+description: "Check that workflow files follow the Bitcart key order, blank-line layout and permission comments"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: bitcart/bitcart-actions/actions/setup-python@master
+      with:
+        enable-cache: "false"
+
+    - name: Check workflow layout
+      shell: bash
+      env:
+        TOOL_PATH: ${{ github.action_path }}/../..
+      run: |
+        if ! uvx --from "$TOOL_PATH" workflow-layout --check; then
+          echo "::error::Workflow files don't follow the layout. Fix them with: uvx --from git+https://github.com/bitcart/bitcart-actions workflow-layout"
+          exit 1
+        fi

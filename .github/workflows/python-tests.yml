@@ -180,8 +180,8 @@ jobs:
         run: bash -e -o pipefail <<< "$TESTS"
 
       - name: Upload coverage to Codecov
-        uses: bitcart/bitcart-actions/actions/codecov@master
         if: ${{ !cancelled() }}
+        uses: bitcart/bitcart-actions/actions/codecov@master
         with:
           name: ${{ inputs.coverage-name }} - Python ${{ env.PYTHON }}
           flags: ${{ inputs.coverage-flag }}
@@ -189,7 +189,7 @@ jobs:
           upload_coverage: ${{ job.status == 'success' }}
 
       - name: Upload test results
-        uses: bitcart/bitcart-actions/actions/upload-test-results@master
         if: ${{ !cancelled() }}
+        uses: bitcart/bitcart-actions/actions/upload-test-results@master
         with:
           suffix: ${{ inputs.coverage-flag }}-py${{ env.PYTHON }}

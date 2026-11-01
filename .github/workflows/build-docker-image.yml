@@ -56,14 +56,16 @@ permissions:
 
 jobs:
   build-matrix:
-    runs-on: ${{ matrix.runner }}
     name: build-matrix-${{ matrix.suffix }}
+    runs-on: ${{ matrix.runner }}
+
     permissions:
       contents: read
       packages: write # publishing to GHCR
       id-token: write # OIDC for provenance
       attestations: write # github attestations
       artifact-metadata: write # artifact storage metadata (recommended by actions/attest)
+
     strategy:
       fail-fast: false
       matrix:
@@ -193,6 +195,7 @@ jobs:
     name: merge
     needs: [build-matrix]
     runs-on: ${{ inputs.merge-runs-on }}
+
     permissions:
       contents: read
       packages: write # publishing to GHCR

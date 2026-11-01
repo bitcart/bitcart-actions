@@ -1,17 +1,21 @@
-name: Zizmor Audit
+name: Workflow Checks
 
 on:
   workflow_call:
     inputs:
-      paths:
-        description: "The paths to run the audit on"
-        type: string
-        default: "."
-      advanced-security:
-        description: "Whether to enable advanced security features (github only)"
+      zizmor:
+        description: "Whether to run the zizmor audit (it only scans .github/workflows)"
         type: boolean
         default: true
-      persona:
+      zizmor-paths:
+        description: "The paths to run the zizmor audit on"
+        type: string
+        default: "."
+      zizmor-advanced-security:
+        description: "Whether to enable zizmor advanced security features (github only)"
+        type: boolean
+        default: true
+      zizmor-persona:
         description: "Zizmor persona (regular, pedantic, auditor)"
         type: string
         default: "auditor"
@@ -38,8 +42,13 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
+        if: ${{ inputs.zizmor }}
         uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
-          inputs: ${{ inputs.paths }}
-          advanced-security: ${{ inputs.advanced-security }}
-          persona: ${{ inputs.persona }}
+          inputs: ${{ inputs.zizmor-paths }}
+          advanced-security: ${{ inputs.zizmor-advanced-security }}
+          persona: ${{ inputs.zizmor-persona }}
+
+      - name: Check workflow layout
+        if: ${{ !cancelled() }}
+        uses: bitcart/bitcart-actions/actions/workflow-layout@master
