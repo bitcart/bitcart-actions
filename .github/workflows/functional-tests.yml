@@ -37,7 +37,7 @@ on:
         default: "ubuntu-latest"
     secrets:
       CODECOV_TOKEN:
-        required: true
+        required: false
 
 permissions:
   contents: read
@@ -46,6 +46,10 @@ jobs:
   run:
     name: run
     runs-on: ${{ inputs.runs-on }}
+
+    permissions:
+      contents: read
+      id-token: write # OIDC token for codecov uploads
 
     services:
       redis:

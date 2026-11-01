@@ -4,8 +4,9 @@ description: "Upload coverage report to Codecov"
 
 inputs:
   token:
-    description: "Codecov upload token"
-    required: true
+    description: "Codecov upload token; leave empty to authenticate with OIDC (needs id-token: write)"
+    required: false
+    default: ""
   name:
     description: "Name for Codecov report"
     required: false
@@ -41,6 +42,7 @@ runs:
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         token: ${{ inputs.token }}
+        use_oidc: ${{ inputs.token == '' }}
         name: ${{ inputs.name }}
         flags: ${{ inputs.flags }}
         env_vars: ${{ inputs.env_vars }}
@@ -52,6 +54,7 @@ runs:
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         token: ${{ inputs.token }}
+        use_oidc: ${{ inputs.token == '' }}
         name: ${{ inputs.name }}
         flags: ${{ inputs.flags }}
         env_vars: ${{ inputs.env_vars }}
