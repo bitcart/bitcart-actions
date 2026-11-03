@@ -4,11 +4,11 @@ on:
   workflow_call:
     inputs:
       zizmor:
-        description: "Whether to run the zizmor audit (it only scans .github/workflows)"
+        description: "Whether to run the zizmor audit"
         type: boolean
         default: true
       zizmor-paths:
-        description: "The paths to run the zizmor audit on"
+        description: "The paths to run the zizmor audit on (github only)"
         type: string
         default: "."
       zizmor-advanced-security:
@@ -46,7 +46,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        if: ${{ inputs.zizmor }}
+        if: ${{ inputs.zizmor && github.server_url == 'https://github.com' }}
         uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           inputs: ${{ inputs.zizmor-paths }}
@@ -55,12 +55,22 @@ jobs:
           version: ${{ env.ZIZMOR_VERSION }}
 
       - name: Fail on zizmor findings
-        if: ${{ inputs.zizmor && inputs.zizmor-advanced-security }}
+        if: ${{ inputs.zizmor && inputs.zizmor-advanced-security && github.server_url == 'https://github.com' }}
         uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           inputs: ${{ inputs.zizmor-paths }}
           advanced-security: false
           annotations: true
+          persona: ${{ inputs.zizmor-persona }}
+          version: ${{ env.ZIZMOR_VERSION }}
+
+      - name: Run zizmor on Forgejo workflows
+        if: ${{ inputs.zizmor && github.server_url != 'https://github.com' }}
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          inputs: .forgejo/workflows/*.yml
+          online-audits: false
+          advanced-security: false
           persona: ${{ inputs.zizmor-persona }}
           version: ${{ env.ZIZMOR_VERSION }}
 

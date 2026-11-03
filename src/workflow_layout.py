@@ -117,7 +117,6 @@ DEFAULT_GLOBS = [
     ".forgejo/workflows/*.yml",
     ".forgejo/workflows/*.yaml",
     ".github/zizmor.yml",
-    ".forgejo/zizmor.yml",
     "actions/*/action.yml",
     "actions/*/action.yaml",
     ".github/actions/*/action.yml",
@@ -825,11 +824,18 @@ def main(argv: list[str] | None = None) -> int:
     files = args.files or sorted(
         p for pattern in DEFAULT_GLOBS for p in Path().glob(pattern)
     )
+    workflow_dirs = (Path(".github/workflows"), Path(".forgejo/workflows"))
     zizmor_config = Path(".github/zizmor.yml")
-    has_github_workflows = any(p.parent == Path(".github/workflows") for p in files)
-    if not args.files and has_github_workflows and zizmor_config not in files:
+    has_workflows = any(p.parent in workflow_dirs for p in files)
+    if not args.files and has_workflows and zizmor_config not in files:
         files.append(zizmor_config)
     status = 0
+    if not args.files and Path(".forgejo/zizmor.yml").exists():
+        print(
+            f"error: .forgejo/zizmor.yml: zizmor never reads it, use {zizmor_config}",
+            file=sys.stderr,
+        )
+        status = 2
     for path in files:
         text = path.read_text() if path.exists() else ""
         try:
