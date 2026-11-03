@@ -17,6 +17,7 @@ TOP = [
     "on",
     "concurrency",
     "permissions",
+    "enable-openid-connect",
     "env",
     "defaults",
     "jobs",
@@ -49,6 +50,7 @@ JOB_HEADER = [
     "outputs",
     "with",
     "secrets",
+    "enable-openid-connect",
 ]
 JOB_BLOCKS = ["permissions", "strategy", "services", "env", "defaults", "steps"]
 STEP = [

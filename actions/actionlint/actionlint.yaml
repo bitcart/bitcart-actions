@@ -6,3 +6,7 @@ paths:
       - 'specifying action "\$/.+" in invalid format because ref is missing'
       # The concurrency `queue` key is not supported by actionlint 1.7.12 yet: https://github.com/rhysd/actionlint/issues/657
       - 'unexpected key "queue" for "concurrency" section'
+  ".forgejo/workflows/*.{yml,yaml}":
+    ignore:
+      # Forgejo's `enable-openid-connect` is not part of GitHub's syntax, so actionlint doesn't know it
+      - 'unexpected key "enable-openid-connect" for "(workflow|job)" section'
