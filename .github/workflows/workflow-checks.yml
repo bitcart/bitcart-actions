@@ -27,6 +27,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   run:
     name: run
@@ -64,15 +68,17 @@ jobs:
           persona: ${{ inputs.zizmor-persona }}
           version: ${{ env.ZIZMOR_VERSION }}
 
+      - name: Set up Python
+        if: ${{ inputs.zizmor && github.server_url != 'https://github.com' }}
+        uses: bitcart/bitcart-actions/actions/setup-python@master
+        with:
+          enable-cache: "false"
+
       - name: Run zizmor on Forgejo workflows
         if: ${{ inputs.zizmor && github.server_url != 'https://github.com' }}
-        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
-        with:
-          inputs: .forgejo/workflows/*.yml
-          online-audits: false
-          advanced-security: false
-          persona: ${{ inputs.zizmor-persona }}
-          version: ${{ env.ZIZMOR_VERSION }}
+        env:
+          PERSONA: ${{ inputs.zizmor-persona }}
+        run: uvx "zizmor==$ZIZMOR_VERSION" --offline --persona="$PERSONA" .forgejo/workflows/*.yml
 
       - name: Check workflow layout
         if: ${{ !cancelled() }}
