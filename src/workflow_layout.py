@@ -1,8 +1,10 @@
-"""Enforce Bitcart conventions in GitHub/Forgejo workflow files and zizmor config."""
+"""Enforce Bitcart conventions in GitHub/Forgejo workflows, composite actions and zizmor config."""
 
 import argparse
 import difflib
+import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -62,6 +64,9 @@ STEP = [
     "continue-on-error",
     "timeout-minutes",
 ]
+ACTION_TOP = ["name", "description", "author", "inputs", "outputs", "runs", "branding"]
+ACTION_FIELDS = ["description", "required", "default", "deprecationMessage", "value"]
+ACTION_RUNS = ["using", "main", "pre", "pre-if", "post", "post-if", "steps"]
 PERMISSION_COMMENTS = {
     "actions": ["starting the release run on the tag"],
     "artifact-metadata": ["artifact storage metadata (recommended by actions/attest)"],
@@ -76,6 +81,7 @@ PERMISSION_COMMENTS = {
     "issues": ["to synchronize issue labels", "to create issues diagram"],
     "packages": ["publishing to GHCR"],
     "pages": ["to publish on github pages"],
+    "pull-requests": ["comment with the lock diff"],
     "security-events": ["needed for github advanced security"],
 }
 SHARED_WORKFLOW_PERMISSIONS = {
@@ -87,9 +93,20 @@ SHARED_WORKFLOW_PERMISSIONS = {
     },
     "issues-diagram.yml": {"issues": "to create issues diagram"},
     "labels-sync.yml": {"issues": "to synchronize issue labels"},
+    "lock-diff.yml": {"pull-requests": "comment with the lock diff"},
     "python-tests.yml": {"id-token": "OIDC token for codecov uploads"},
     "workflow-checks.yml": {"security-events": "needed for github advanced security"},
 }
+PULL_REQUEST_TRIGGERS = {"pull_request", "pull_request_target"}
+PULL_REQUEST_CONCURRENCY = {
+    "group": "${{ github.workflow_ref }}-${{ github.event.pull_request.number || github.sha }}",
+    "cancel-in-progress": True,
+}
+SERIAL_CONCURRENCY = {
+    "group": "${{ github.workflow_ref }}",
+    "cancel-in-progress": False,
+}
+QUEUED_CONCURRENCY = {**SERIAL_CONCURRENCY, "queue": "max"}
 SHARED_WORKFLOW_RE = re.compile(
     r"^    uses: bitcart/bitcart-actions/\.github/workflows/([^@\s]+)@"
 )
@@ -101,7 +118,59 @@ DEFAULT_GLOBS = [
     ".forgejo/workflows/*.yaml",
     ".github/zizmor.yml",
     ".forgejo/zizmor.yml",
+    "actions/*/action.yml",
+    "actions/*/action.yaml",
+    ".github/actions/*/action.yml",
+    ".github/actions/*/action.yaml",
 ]
+JOB_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+MINOR_WORDS = {
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "via",
+    "with",
+}
+RUNNER = "ubuntu-latest"
+SHARED = "bitcart/bitcart-actions/"
+DEFAULTS = {"run": {"shell": "bash"}}
+STEP_SHELL = "        shell: bash"
+UNPINNED = [
+    (re.compile(r"@latest\b"), "`@latest`"),
+    (re.compile(r":latest\b"), "a `:latest` image"),
+    (re.compile(r"/releases/latest\b"), "`releases/latest`"),
+    (
+        re.compile(r"\b(?:curl|wget)\b[^|\n]*\|\s*(?:ba)?sh\b"),
+        "a download piped into a shell",
+    ),
+]
+PIP_INSTALL_RE = re.compile(r"\bpip install\b([^\n;&|]*)")
+PIP_VALUE_OPTIONS = {
+    "-r",
+    "--requirement",
+    "-c",
+    "--constraint",
+    "-e",
+    "--editable",
+    "--python",
+}
+SHELLCHECK_EXCLUDES = "SC1091,SC2194,SC2050,SC2153,SC2154,SC2157,SC2043"
+ACTION_GLOBS = DEFAULT_GLOBS[-4:]
+WORKFLOW_NAME_PREFIXES = ("name: ", "    name: ", "      - name: ", "        name: ")
+ACTION_NAME_PREFIXES = ("name: ", "    - name: ", "      name: ")
+DOUBLE_QUOTED_RE = re.compile(r'^"(?:[^"\\]|\\.)*"$')
+SINGLE_QUOTED_RE = re.compile(r"^'(?:[^']|'')*'$")
 ZIZMOR_CONFIG = """\
 rules:
   unpinned-uses:
@@ -211,19 +280,22 @@ def reorder_on(lines: list[str], path: str) -> None:
     lines[start:end] = block
 
 
-def reorder_steps(lines: list[str], path: str, job: str, start: int, end: int) -> None:
-    starts = [k for k in range(start, end) if lines[k].startswith("      - ")]
+def reorder_steps(
+    lines: list[str], where: str, start: int, end: int, indent: int = 6
+) -> None:
+    dash, keys_at = " " * indent + "- ", indent + 2
+    starts = [k for k in range(start, end) if lines[k].startswith(dash)]
     for n in reversed(range(len(starts))):
         s = starts[n]
         e = starts[n + 1] if n + 1 < len(starts) else end
         while e - 1 > s and not lines[e - 1].strip():
             e -= 1
-        step = ["        " + lines[s][8:], *lines[s + 1 : e]]
-        keys = re.findall(r"(?m)^ {8}([A-Za-z0-9_-]+):", "\n".join(step))
+        step = [" " * keys_at + lines[s][keys_at:], *lines[s + 1 : e]]
+        keys = re.findall(rf"(?m)^ {{{keys_at}}}([A-Za-z0-9_-]+):", "\n".join(step))
         label = "name" if "name" in keys else keys[0]
-        where = f"{path}: jobs.{job}.steps[{n}]"
-        step = reorder(step, 8, [label, *(k for k in STEP if k != label)], set(), where)
-        step[0] = "      - " + step[0][8:]
+        order = [label, *(k for k in STEP if k != label)]
+        step = reorder(step, keys_at, order, set(), f"{where}.steps[{n}]")
+        step[0] = dash + step[0][keys_at:]
         lines[s:e] = step
 
 
@@ -255,7 +327,333 @@ def reorder_jobs(lines: list[str], path: str) -> None:
             None,
         )
         if steps is not None:
-            reorder_steps(lines, path, name, steps + 1, block_end(lines, steps, 4))
+            end = block_end(lines, steps, 4)
+            reorder_steps(lines, f"{path}: jobs.{name}", steps + 1, end)
+
+
+def scalar(value: str) -> object:
+    try:
+        return yaml.safe_load(f"key: {value}")["key"]
+    except yaml.YAMLError:
+        return None
+
+
+def unquoted(value: str) -> str:
+    if not (DOUBLE_QUOTED_RE.match(value) or SINGLE_QUOTED_RE.match(value)):
+        return value
+    text = scalar(value)
+    plain = isinstance(text, str) and text == text.strip() and scalar(text) == text
+    return text if plain else value
+
+
+def double_quoted(value: str) -> str:
+    if DOUBLE_QUOTED_RE.match(value):
+        return value
+    if not SINGLE_QUOTED_RE.match(value) and (
+        value[0] in "|>[{&*!'\"" or " #" in value
+    ):
+        return value
+    text = scalar(value)
+    return json.dumps(text, ensure_ascii=False) if isinstance(text, str) else value
+
+
+def fix_quoting(lines: list[str], name_prefixes: tuple[str, ...]) -> list[str]:
+    fixed = []
+    for line in lines:
+        if prefix := next((p for p in name_prefixes if line.startswith(p)), None):
+            line = prefix + unquoted(line[len(prefix) :])
+        elif match := re.match(r"^( *(?:- )?description: )(\S.*)$", line):
+            line = match.group(1) + double_quoted(match.group(2))
+        fixed.append(line)
+    return fixed
+
+
+def layout_action(text: str, path: str) -> str:
+    original = load(text, path)
+    lines = text.split("\n")
+    has_newline = lines[-1] == ""
+    body = fix_quoting(lines[:-1] if has_newline else lines, ACTION_NAME_PREFIXES)
+    baseline = "\n".join(body)
+    body = reorder(body, 0, ACTION_TOP, set(ACTION_TOP), path)
+    for section in ("inputs", "outputs"):
+        if f"{section}:" in body:
+            start = body.index(f"{section}:")
+            end = block_end(body, start, 0)
+            fields = [
+                k
+                for k in range(start + 1, end)
+                if re.match(r"^  [A-Za-z0-9_-]+:\s*$", body[k])
+            ]
+            block = body[start:end]
+            starts = [k - start for k in fields]
+            reorder_children(block, starts, 4, ACTION_FIELDS, f"{path}: {section}")
+            body[start:end] = block
+    if "runs:" in body:
+        start = body.index("runs:")
+        reorder_children(body, [start], 2, ACTION_RUNS, path)
+        if "  steps:" in body:
+            steps = body.index("  steps:")
+            end = block_end(body, steps, 2)
+            reorder_steps(body, f"{path}: runs", steps + 1, end, indent=4)
+    new = "\n".join(body) + ("\n" if has_newline else "")
+    if original != yaml.safe_load(new) or content_lines(baseline) != content_lines(new):
+        raise LayoutError(
+            f"{path}: refusing to rewrite, the result would change the action"
+        )
+    return new
+
+
+def load(text: str, path: str) -> object:
+    try:
+        return yaml.safe_load(text)
+    except yaml.YAMLError as e:
+        raise LayoutError(f"{path}: invalid YAML: {e}") from e
+
+
+def title_case(word: str, first: bool) -> str:
+    if not first and word.lower() in MINOR_WORDS:
+        return word.lower()
+    return word[:1].upper() + word[1:]
+
+
+def title_case_error(name: object, where: str) -> list[str]:
+    words = str(name or "").split()
+    fixed = " ".join(title_case(w, n == 0) for n, w in enumerate(words))
+    if fixed == " ".join(words):
+        return []
+    return [f"{where}: name {name!r} should be Title Case ({fixed!r})"]
+
+
+def unpinned_packages(script: str) -> list[str]:
+    packages = []
+    for match in PIP_INSTALL_RE.finditer(script):
+        args = match.group(1).split()
+        for n, arg in enumerate(args):
+            if arg.startswith("-") or (n and args[n - 1] in PIP_VALUE_OPTIONS):
+                continue
+            if "==" not in arg and re.match(
+                r"^[A-Za-z0-9][A-Za-z0-9._-]*(\[.*\])?$", arg
+            ):
+                packages.append(arg)
+    return packages
+
+
+def unpinned_errors(text: str, where: str) -> list[str]:
+    errors = [
+        f"{where}: uses {what}" for pattern, what in UNPINNED if pattern.search(text)
+    ]
+    errors += [
+        f"{where}: installs {package!r} without pinning a version"
+        for package in unpinned_packages(text)
+    ]
+    return errors
+
+
+def value_errors(values: object, where: str) -> list[str]:
+    if not isinstance(values, dict):
+        return []
+    return [
+        error
+        for key, value in values.items()
+        if isinstance(value, str)
+        for error in unpinned_errors(value, f"{where}.{key}")
+    ]
+
+
+def input_default_errors(inputs: object, where: str) -> list[str]:
+    if not isinstance(inputs, dict):
+        return []
+    return value_errors(
+        {
+            key: spec.get("default")
+            for key, spec in inputs.items()
+            if isinstance(spec, dict)
+        },
+        where,
+    )
+
+
+def step_errors(steps: object, where: str) -> list[str]:
+    errors = []
+    for n, step in enumerate(steps if isinstance(steps, list) else []):
+        if not isinstance(step, dict):
+            continue
+        if str(step.get("uses", "")).startswith(SHARED):
+            errors += value_errors(step.get("with"), f"{where}.steps[{n}].with")
+        if "run" not in step:
+            continue
+        if "name" not in step:
+            errors.append(f"{where}.steps[{n}]: a `run` step needs a `name`")
+        errors += unpinned_errors(str(step["run"]), f"{where}.steps[{n}]")
+    return errors
+
+
+def convention_errors(data: object, path: str) -> list[str]:
+    if not isinstance(data, dict):
+        return []
+    if Path(path).name in ("action.yml", "action.yaml"):
+        steps = (data.get("runs") or {}).get("steps")
+        return (
+            title_case_error(data.get("name"), path)
+            + input_default_errors(data.get("inputs"), f"{path}: inputs")
+            + step_errors(steps, f"{path}: runs")
+        )
+    errors = title_case_error(data.get("name"), path)
+    on = triggers(data)
+    if "schedule" in on and "workflow_dispatch" not in on:
+        errors.append(f"{path}: a scheduled workflow also needs `workflow_dispatch`")
+    call = (data.get(True) or data.get("on") or {}) if "workflow_call" in on else {}
+    if isinstance(call, dict) and isinstance(call.get("workflow_call"), dict):
+        errors += input_default_errors(
+            call["workflow_call"].get("inputs"), f"{path}: on.workflow_call.inputs"
+        )
+    for job_id, job in (data.get("jobs") or {}).items():
+        if not isinstance(job, dict):
+            continue
+        where = f"{path}: jobs.{job_id}"
+        name = job.get("name")
+        if not JOB_ID_RE.match(job_id):
+            errors.append(f"{where}: job ids are kebab-case")
+        if name is None:
+            errors.append(f"{where}: needs `name: {job_id}`")
+        elif name != job_id and "${{" not in str(name):
+            errors.append(f"{where}: `name` must match the job id ({job_id!r})")
+        runs_on = job.get("runs-on")
+        if runs_on is not None and runs_on != RUNNER and "${{" not in str(runs_on):
+            errors.append(f"{where}: `runs-on` must be {RUNNER} or an expression")
+        if str(job.get("uses", "")).startswith(SHARED):
+            errors += value_errors(job.get("with"), f"{where}.with")
+        errors += step_errors(job.get("steps"), where)
+        images = [job.get("container")] + list((job.get("services") or {}).values())
+        for image in images:
+            image = image.get("image") if isinstance(image, dict) else image
+            if isinstance(image, str):
+                errors += unpinned_errors(image, f"{where}: image {image!r}")
+    return errors
+
+
+def action_scripts(path: Path) -> list[tuple[str, str, str]]:
+    data = load(path.read_text(), str(path))
+    steps = ((data or {}).get("runs") or {}).get("steps") or []
+    return [
+        (f"{path}: runs.steps[{n}]", step["shell"], str(step["run"]))
+        for n, step in enumerate(steps)
+        if isinstance(step, dict)
+        and "run" in step
+        and step.get("shell") in ("bash", "sh")
+    ]
+
+
+def shellcheck_main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Run shellcheck on the `run` scripts of composite actions, as actionlint does for workflows"
+    )
+    parser.add_argument(
+        "files", nargs="*", type=Path, help="action files (default: all in the repo)"
+    )
+    parser.add_argument(
+        "--shellcheck", default="shellcheck", help="shellcheck executable"
+    )
+    args = parser.parse_args(argv)
+    files = args.files or sorted(
+        p for pattern in ACTION_GLOBS for p in Path().glob(pattern)
+    )
+    status = 0
+    for path in files:
+        try:
+            scripts = action_scripts(path)
+        except LayoutError as e:
+            print(f"error: {e}", file=sys.stderr)
+            status = 2
+            continue
+        for where, shell, script in scripts:
+            setup = "set -eo pipefail" if shell == "bash" else "set -e"
+            sanitized = re.sub(
+                r"\$\{\{.*?\}\}",
+                lambda m: re.sub(r"[^\n]", "_", m.group(0)),
+                script,
+                flags=re.DOTALL,
+            )
+            result = subprocess.run(
+                [
+                    args.shellcheck,
+                    "--norc",
+                    "-f",
+                    "gcc",
+                    "-x",
+                    "--shell",
+                    shell,
+                    "-e",
+                    SHELLCHECK_EXCLUDES,
+                    "-",
+                ],
+                input=f"{setup}\n{sanitized}\n",
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            for line in result.stdout.splitlines():
+                _, row, rest = line.split(":", 2)
+                print(f"{where}: line {int(row) - 1}:{rest}")
+            if result.returncode:
+                status = max(status, 1)
+    return status
+
+
+def triggers(workflow: object) -> set[str]:
+    if not isinstance(workflow, dict):
+        return set()
+    on = workflow.get(True) or workflow.get("on") or {}
+    return {on} if isinstance(on, str) else set(on)
+
+
+def publishes_versions(workflow: dict) -> bool:
+    on = workflow.get(True) or workflow.get("on") or {}
+    push = on.get("push") if isinstance(on, dict) else None
+    return "release" in triggers(workflow) or (
+        isinstance(push, dict) and "tags" in push
+    )
+
+
+def expected_concurrency(workflow: object, path: str) -> dict[str, object] | None:
+    on = triggers(workflow)
+    if not on or "workflow_call" in on:
+        return None
+    if on & PULL_REQUEST_TRIGGERS:
+        return PULL_REQUEST_CONCURRENCY
+    if Path(path).parent.parent.name == ".github" and publishes_versions(workflow):
+        return QUEUED_CONCURRENCY
+    return SERIAL_CONCURRENCY
+
+
+def fix_concurrency(lines: list[str], path: str, workflow: object) -> list[str]:
+    expected = expected_concurrency(workflow, path)
+    current = workflow.get("concurrency") if isinstance(workflow, dict) else None
+    if expected is None:
+        if current is not None and "workflow_call" in triggers(workflow):
+            raise LayoutError(
+                f"{path}: a workflow_call workflow must not set concurrency, its callers own it"
+            )
+        return lines
+    if current == expected:
+        return lines
+    block = [
+        "concurrency:",
+        f"  group: {expected['group']}",
+        f"  cancel-in-progress: {str(expected['cancel-in-progress']).lower()}",
+        *([f"  queue: {expected['queue']}"] if "queue" in expected else []),
+    ]
+
+    def top_level(key: str) -> int | None:
+        return next((n for n, line in enumerate(lines) if line.startswith(key)), None)
+
+    if (start := top_level("concurrency:")) is not None:
+        end = block_end(lines, start, 0)
+    elif (on := top_level("on:")) is not None:
+        start = end = block_end(lines, on, 0)
+    else:
+        raise LayoutError(f"{path}: no `on:` block to add concurrency after")
+    return lines[:start] + block + lines[end:]
 
 
 def content_lines(text: str) -> Counter[str]:
@@ -316,27 +714,89 @@ def fix_permission_comments(
         raise LayoutError("\n".join(errors))
 
 
+def has_run_steps(workflow: object) -> bool:
+    jobs = workflow.get("jobs") if isinstance(workflow, dict) else None
+    return any(
+        isinstance(step, dict) and "run" in step
+        for job in (jobs or {}).values()
+        if isinstance(job, dict)
+        for step in job.get("steps") or []
+    )
+
+
+def fix_shell(lines: list[str], path: str, workflow: object) -> list[str]:
+    if not has_run_steps(workflow) or workflow.get("defaults") == DEFAULTS:
+        return lines
+    if "defaults" in workflow:
+        raise LayoutError(f"{path}: `defaults` must be exactly `run: {{shell: bash}}`")
+    if "jobs:" not in lines:
+        raise LayoutError(f"{path}: no `jobs:` block to add defaults before")
+    start = lines.index("jobs:")
+    return [
+        *lines[:start],
+        "defaults:",
+        "  run:",
+        "    shell: bash",
+        "",
+        *lines[start:],
+    ]
+
+
+def drop_step_shells(lines: list[str]) -> list[str]:
+    result, in_steps = [], False
+    for line in lines:
+        if line.strip() and len(line) - len(line.lstrip()) <= 4:
+            in_steps = line == "    steps:"
+        if not (in_steps and line.rstrip() == STEP_SHELL):
+            result.append(line)
+    return result
+
+
+def without_step_shells(workflow: dict) -> dict:
+    jobs = {
+        name: {
+            **job,
+            "steps": [
+                {k: v for k, v in step.items() if (k, v) != ("shell", "bash")}
+                if isinstance(step, dict)
+                else step
+                for step in job["steps"]
+            ],
+        }
+        if isinstance(job, dict) and job.get("steps")
+        else job
+        for name, job in (workflow.get("jobs") or {}).items()
+    }
+    return {**workflow, "jobs": jobs}
+
+
 def layout(text: str, path: str = "<workflow>") -> str:
-    try:
-        original = yaml.safe_load(text)
-    except yaml.YAMLError as e:
-        raise LayoutError(f"{path}: invalid YAML: {e}") from e
+    original = load(text, path)
     lines = text.split("\n")
     has_newline = lines[-1] == ""
     body = lines[:-1] if has_newline else lines
+    body = fix_concurrency(body, path, original)
+    body = fix_shell(body, path, original)
+    if has_run_steps(original):
+        body = drop_step_shells(body)
+    body = fix_quoting(body, WORKFLOW_NAME_PREFIXES)
+    baseline = "\n".join(body)
+    expected = original
+    if concurrency := expected_concurrency(original, path):
+        expected = {**expected, "concurrency": concurrency}
+    if has_run_steps(original):
+        expected = {**without_step_shells(expected), "defaults": DEFAULTS}
     body = reorder(body, 0, TOP, set(TOP), path)
     reorder_on(body, path)
     reorder_jobs(body, path)
     laid_out = "\n".join(body)
     defines_shared = None
-    if isinstance(original, dict) and "workflow_call" in (
-        original.get(True) or original.get("on") or {}
-    ):
+    if "workflow_call" in triggers(original):
         defines_shared = SHARED_WORKFLOW_PERMISSIONS.get(Path(path).name)
     fix_permission_comments(body, path, defines_shared)
     new = "\n".join(body) + ("\n" if has_newline else "")
-    same_data = original == yaml.safe_load(new)
-    same_lines = content_lines(text) == content_lines(laid_out)
+    same_data = expected == yaml.safe_load(new)
+    same_lines = content_lines(baseline) == content_lines(laid_out)
     only_comments = all(
         a.split(" #")[0] == b.split(" #")[0]
         for a, b in zip(laid_out.split("\n"), body, strict=True)
@@ -354,7 +814,7 @@ def main(argv: list[str] | None = None) -> int:
         "files",
         nargs="*",
         type=Path,
-        help="workflow and zizmor files (default: under .github and .forgejo)",
+        help="workflow, composite action and zizmor files (default: all of them in the repo)",
     )
     parser.add_argument(
         "--check",
@@ -376,11 +836,22 @@ def main(argv: list[str] | None = None) -> int:
             is_zizmor_config = (
                 path.name == "zizmor.yml" and path.parent.name != "workflows"
             )
-            new = ZIZMOR_CONFIG if is_zizmor_config else layout(text, str(path))
+            if is_zizmor_config:
+                new = ZIZMOR_CONFIG
+            elif path.name in ("action.yml", "action.yaml"):
+                new = layout_action(text, str(path))
+            else:
+                new = layout(text, str(path))
+            errors = (
+                []
+                if is_zizmor_config
+                else convention_errors(load(new, str(path)), str(path))
+            )
         except LayoutError as e:
-            print(f"error: {e}", file=sys.stderr)
+            errors, new = [str(e)], text
+        for error in errors:
+            print(f"error: {error}", file=sys.stderr)
             status = 2
-            continue
         if new == text:
             continue
         status = max(status, 1)

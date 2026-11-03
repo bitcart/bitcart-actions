@@ -1,4 +1,4 @@
-name: "Setup Python"
+name: Setup Python
 
 description: "Set up Python with uv"
 
@@ -23,9 +23,9 @@ runs:
   using: composite
   steps:
     - name: Set environment variables
-      shell: bash
       env:
         PYTHON_VERSION: ${{ inputs.python-version }}
+      shell: bash
       run: |
         if [[ ! $PYTHON_VERSION =~ ^[A-Za-z0-9.+_-]+$ ]]; then
           echo "::error::Invalid python-version: $PYTHON_VERSION"

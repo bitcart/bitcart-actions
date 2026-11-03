@@ -1,0 +1,75 @@
+name: Lock Diff
+
+description: "Summarize the uv.lock version changes a pull request would merge, in the job summary and a sticky comment (GitHub only)"
+
+inputs:
+  lockfile:
+    description: "Path to the uv lock file"
+    default: "uv.lock"
+  comment:
+    description: "Keep a pull request comment with the summary up to date (needs pull-requests: write)"
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: bitcart/bitcart-actions/actions/setup-python@master
+      with:
+        enable-cache: "false"
+
+    - name: Diff lock file
+      env:
+        GH_TOKEN: ${{ github.token }}
+        LOCKFILE: ${{ inputs.lockfile }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        TOOL_PATH: ${{ github.action_path }}/../..
+      shell: bash
+      run: |
+        if [[ -z $BASE_SHA ]]; then
+          echo "::error::Lock Diff only runs on pull_request events"
+          exit 1
+        fi
+        out="$RUNNER_TEMP/lock-diff"
+        mkdir -p "$out"
+        : > "$out/diff.md"
+        if [[ ! -f $LOCKFILE ]]; then
+          echo "No \`$LOCKFILE\` in this pull request" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+        if ! gh api -H "Accept: application/vnd.github.raw" "repos/$GITHUB_REPOSITORY/contents/$LOCKFILE?ref=$BASE_SHA" > "$out/base.lock" 2> "$out/error"; then
+          if ! grep -q "HTTP 404" "$out/error"; then
+            cat "$out/error" >&2
+            exit 1
+          fi
+          : > "$out/base.lock"
+        fi
+        uvx --from "$TOOL_PATH" uv-lock-diff "$out/base.lock" "$LOCKFILE" > "$out/diff.md"
+        if [[ -s $out/diff.md ]]; then
+          cat "$out/diff.md" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "No package versions changed in \`$LOCKFILE\`" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Update pull request comment
+      if: ${{ inputs.comment == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+        LOCKFILE: ${{ inputs.lockfile }}
+        PR: ${{ github.event.pull_request.number }}
+      shell: bash
+      run: |
+        marker="<!-- bitcart-lock-diff:$LOCKFILE -->"
+        diff=$(cat "$RUNNER_TEMP/lock-diff/diff.md")
+        ids=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id")
+        id=${ids%%$'\n'*}
+        if [[ -z $diff ]]; then
+          [[ -z $id ]] && exit 0
+          diff="No package versions changed in \`$LOCKFILE\`."
+        fi
+        body="$marker"$'\n'"$diff"
+        if [[ -n $id ]]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" > /dev/null
+        else
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+        fi

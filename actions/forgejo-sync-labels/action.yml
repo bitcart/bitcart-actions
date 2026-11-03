@@ -1,0 +1,23 @@
+name: Sync Forgejo Labels
+
+description: "Sync the organization label taxonomy from bitcart/.github to a Forgejo repository"
+
+inputs:
+  token:
+    description: "Token with permission to manage the repository's labels"
+    required: true
+  delete-other-labels:
+    description: "Whether to delete labels that are not in the taxonomy"
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Sync labels
+      env:
+        TOKEN: ${{ inputs.token }}
+        API_URL: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}/labels
+        DELETE_OTHER: ${{ inputs.delete-other-labels }}
+        SCRIPT: ${{ github.action_path }}/../../scripts/forgejo-sync-labels.sh
+      shell: bash
+      run: bash "$SCRIPT"

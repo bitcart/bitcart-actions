@@ -1,31 +1,29 @@
-name: "Install bitcart-cli"
+name: Install Bitcart CLI
 
-description: "Install the Bitcart CLI binary"
-
-inputs:
-  use-go:
-    description: "Install via go install (requires Go on PATH)"
-    required: false
-    default: "true"
+description: "Install the Bitcart CLI"
 
 runs:
   using: composite
   steps:
-    - name: Install bitcart-cli (go)
-      if: inputs.use-go == 'true'
-      shell: bash
-      run: go install github.com/bitcart/bitcart-cli@latest
-
-    - name: Install bitcart-cli (binary release)
-      if: inputs.use-go != 'true'
+    - name: Install bitcart-cli
+      env:
+        # renovate: datasource=github-releases depName=bitcart/bitcart-cli
+        BITCART_CLI_VERSION: "1.8.0"
+        SHA256_X86_64: 98e8e815c8735faff997ff54e32b3a32ec90987dbe926c82f05dd1ac1e88fcf5
+        SHA256_AARCH64: 792d3ffa67755d687d3d079ef4a7b41309eb8422988085441a385f5aea55617d
       shell: bash
       run: |
-        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-        ARCH=$(uname -m)
-        case "$ARCH" in
-            arm64)   ARCH="aarch64" ;;   # macOS returns arm64, releases use aarch64
-            armv7l)  ARCH="armv7" ;;     # Linux returns armv7l, releases use armv7
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64) sha256=$SHA256_X86_64 ;;
+          aarch64) sha256=$SHA256_AARCH64 ;;
+          *)
+            echo "::error::Unsupported architecture: $arch"
+            exit 1
+            ;;
         esac
-        sudo curl -L "https://github.com/bitcart/bitcart-cli/releases/latest/download/bitcart-cli-${OS}-${ARCH}" \
-            -o /usr/local/bin/bitcart-cli
-        sudo chmod +x /usr/local/bin/bitcart-cli
+        binary="bitcart-cli-linux-$arch"
+        cd "$RUNNER_TEMP"
+        curl -fsSLO "https://github.com/bitcart/bitcart-cli/releases/download/$BITCART_CLI_VERSION/$binary"
+        echo "$sha256  $binary" | sha256sum -c -
+        sudo install -m 0755 "$binary" /usr/local/bin/bitcart-cli

@@ -1,4 +1,4 @@
-name: "Setup Node.js"
+name: Setup Node.js
 
 description: "Set up Node.js with pnpm or yarn"
 
@@ -7,15 +7,19 @@ inputs:
     description: "Package manager to use (pnpm or yarn)"
     required: false
     default: "pnpm"
+  install:
+    description: "Whether to install the JS dependencies. Set to false when a job only needs Node.js."
+    required: false
+    default: "true"
 
 runs:
   using: composite
   steps:
     - name: Check for package.json and .nvmrc
       id: check
-      shell: bash
       env:
         PACKAGE_MANAGER: ${{ inputs.package-manager }}
+      shell: bash
       run: |
         if [[ -f package.json ]]; then
           echo "has-package-json=true" >> "$GITHUB_OUTPUT"
@@ -38,24 +42,25 @@ runs:
       uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
       with:
         runtime: ${{ steps.check.outputs.has-nvmrc != 'true' && 'node@26' || '' }}
-        cache: true
+        cache: ${{ inputs.install == 'true' }}
         require-lockfile: true
+        install: ${{ inputs.install }}
 
     - name: Install Node.js (from .nvmrc)
       if: steps.check.outputs.uses-pnpm != 'true' && steps.check.outputs.has-nvmrc == 'true'
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version-file: ".nvmrc"
-        cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.package-manager || '' }}
+        cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.install == 'true' && inputs.package-manager || '' }}
 
     - name: Install Node.js (default)
       if: steps.check.outputs.uses-pnpm != 'true' && steps.check.outputs.has-nvmrc != 'true'
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: "26"
-        cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.package-manager || '' }}
+        cache: ${{ steps.check.outputs.has-package-json == 'true' && inputs.install == 'true' && inputs.package-manager || '' }}
 
     - name: Install JS dependencies
-      if: steps.check.outputs.uses-pnpm != 'true' && steps.check.outputs.has-package-json == 'true'
+      if: steps.check.outputs.uses-pnpm != 'true' && steps.check.outputs.has-package-json == 'true' && inputs.install == 'true'
       shell: bash
       run: yarn install --frozen-lockfile

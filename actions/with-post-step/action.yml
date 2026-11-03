@@ -20,7 +20,7 @@
 #                                                                                                                      #
 # SPDX-License-Identifier: Apache-2.0                                                                                  #
 # ==================================================================================================================== #
-name: "With post step"
+name: With Post Step
 
 description: "Generic JS Action to execute a main command and set a command as a post step."
 

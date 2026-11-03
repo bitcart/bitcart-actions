@@ -1,6 +1,6 @@
-name: "Workflow layout"
+name: Workflow Layout
 
-description: "Check that workflow files follow the Bitcart key order, blank-line layout and permission comments"
+description: "Check that workflows and composite actions follow the Bitcart layout, naming, permission comments and concurrency groups"
 
 runs:
   using: composite
@@ -11,9 +11,9 @@ runs:
         enable-cache: "false"
 
     - name: Check workflow layout
-      shell: bash
       env:
         TOOL_PATH: ${{ github.action_path }}/../..
+      shell: bash
       run: |
         if ! uvx --from "$TOOL_PATH" workflow-layout --check; then
           echo "::error::Workflow files don't follow the layout. Fix them with: uvx --from git+https://github.com/bitcart/bitcart-actions workflow-layout"

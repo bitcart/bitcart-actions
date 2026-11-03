@@ -1,0 +1,8 @@
+paths:
+  "**/*.{yml,yaml}":
+    ignore:
+      # GitHub's `$/` same-repository references are not supported by actionlint 1.7.12 yet: https://github.com/rhysd/actionlint/issues/711
+      - 'reusable workflow call "\$/.+" at "uses" is not following the format'
+      - 'specifying action "\$/.+" in invalid format because ref is missing'
+      # The concurrency `queue` key is not supported by actionlint 1.7.12 yet: https://github.com/rhysd/actionlint/issues/657
+      - 'unexpected key "queue" for "concurrency" section'

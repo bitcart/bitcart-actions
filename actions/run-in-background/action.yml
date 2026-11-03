@@ -1,4 +1,4 @@
-name: "Run in background"
+name: Run in Background
 
 description: "Run a command in the background and output its logs in the post step."
 

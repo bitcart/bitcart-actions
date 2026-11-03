@@ -1,0 +1,47 @@
+name: Nx Cache
+
+description: "Keep the Nx task cache in the workspace and cache it across runs"
+
+inputs:
+  max-size:
+    description: "Largest size Nx lets its task cache grow to before evicting old entries"
+    required: false
+    default: "1GB"
+
+runs:
+  using: composite
+  steps:
+    - name: Move the Nx cache into the workspace
+      # Nx 24 otherwise shares one cache per user under ~/.nx, outside the cached path. Its task
+      # entries are indexed in a database under workspace-data, so both directories are cached.
+      env:
+        MAX_SIZE: ${{ inputs.max-size }}
+      shell: bash
+      run: |
+        if [[ ! $MAX_SIZE =~ ^[0-9.]+\ ?[KMG]?B?$ ]]; then
+          echo "::error::Invalid max-size: $MAX_SIZE"
+          exit 1
+        fi
+        {
+          echo "NX_CACHE_DIRECTORY=$GITHUB_WORKSPACE/.nx/cache"
+          echo "NX_WORKSPACE_DATA_DIRECTORY=$GITHUB_WORKSPACE/.nx/workspace-data"
+          echo "NX_MAX_CACHE_SIZE=$MAX_SIZE"
+        } >> "$GITHUB_ENV"
+
+    - name: Identify the machine
+      # Nx names its task database after the machine ID and ignores one made under another ID,
+      # so caches are only shared between runners with the same ID (one runner image).
+      id: machine
+      shell: bash
+      run: |
+        id=$({ cat /var/lib/dbus/machine-id /etc/machine-id 2>/dev/null || true; } | sha256sum | cut -c1-16)
+        echo "id=$id" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Nx
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .nx
+        key: v2-nx-${{ steps.machine.outputs.id }}-${{ github.ref_name }}-${{ hashFiles('nx.json') }}-${{ github.sha }}
+        restore-keys: |
+          v2-nx-${{ steps.machine.outputs.id }}-${{ github.ref_name }}-${{ hashFiles('nx.json') }}-
+          v2-nx-${{ steps.machine.outputs.id }}-${{ github.ref_name }}-

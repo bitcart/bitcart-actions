@@ -1,0 +1,30 @@
+name: Setup Just
+
+description: "Install the just command runner from a pinned release, verified against its SHA256 checksum"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Just
+      env:
+        # renovate: datasource=github-releases depName=casey/just
+        JUST_VERSION: "1.59.0"
+        SHA256_X86_64: 409044617b6f06517c1035e55ca38c8c856ff8b650e41bc2aa1ef82d5903a23e
+        SHA256_AARCH64: 23871b1702bfd550fb5f901778fd4290ecf2ee034a45a889fbe96d89b188086d
+      shell: bash
+      run: |
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64) sha256=$SHA256_X86_64 ;;
+          aarch64) sha256=$SHA256_AARCH64 ;;
+          *)
+            echo "::error::Unsupported architecture: $arch"
+            exit 1
+            ;;
+        esac
+        archive="just-$JUST_VERSION-$arch-unknown-linux-musl.tar.gz"
+        cd "$RUNNER_TEMP"
+        curl -fsSLO "https://github.com/casey/just/releases/download/$JUST_VERSION/$archive"
+        echo "$sha256  $archive" | sha256sum -c -
+        tar -xzf "$archive" just
+        sudo install -m 0755 just /usr/local/bin/just

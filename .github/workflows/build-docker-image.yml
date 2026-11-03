@@ -54,6 +54,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build-matrix:
     name: build-matrix-${{ matrix.suffix }}

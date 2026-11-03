@@ -1,0 +1,40 @@
+name: Lock Diff
+
+on:
+  workflow_call:
+    inputs:
+      lockfile:
+        description: "Path to the uv lock file"
+        type: string
+        default: "uv.lock"
+      comment:
+        description: "Keep a pull request comment with the summary up to date"
+        type: boolean
+        default: true
+      runs-on:
+        description: "Runner label to run the job on"
+        type: string
+        default: "ubuntu-latest"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: run
+    runs-on: ${{ inputs.runs-on }}
+
+    permissions:
+      contents: read
+      pull-requests: write # comment with the lock diff
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Diff lock file
+        uses: bitcart/bitcart-actions/actions/lock-diff@master
+        with:
+          lockfile: ${{ inputs.lockfile }}
+          comment: ${{ inputs.comment }}

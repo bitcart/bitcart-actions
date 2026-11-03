@@ -7,10 +7,6 @@ on:
         description: "Directory containing plugins"
         type: string
         default: "."
-      use-go:
-        description: "Install bitcart-cli via go install (requires setup-go)"
-        type: boolean
-        default: true
       runs-on:
         description: "Runner label to run the job on"
         type: string
@@ -29,16 +25,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Go
-        if: inputs.use-go
-        uses: bitcart/bitcart-actions/actions/setup-go@master
-        with:
-          enable-cache: "false"
-
       - name: Install bitcart-cli
         uses: bitcart/bitcart-actions/actions/install-bitcart-cli@master
-        with:
-          use-go: ${{ inputs.use-go }}
 
       - name: Validate plugins
         uses: bitcart/bitcart-actions/actions/validate-plugins@master

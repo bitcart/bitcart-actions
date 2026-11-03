@@ -1,37 +1,37 @@
-name: Configure fast APT mirror
-description: Picks a fast APT mirror without the upstream ACT gate, so it works under act-based runners.
+name: Configure Fast APT Mirror
+
+description: "Picks a fast APT mirror without the upstream ACT gate, so it works under act-based runners."
 
 inputs:
   ref:
-    description: vegardit/fast-apt-mirror.sh git ref (tag, branch, or commit SHA) to fetch the script from.
+    description: "vegardit/fast-apt-mirror.sh git ref (tag, branch, or commit SHA) to fetch the script from."
     default: c02f624f2c4108687b16f980a2c9e10d82bdace6
   healthchecks:
-    description: Number of mirrors to check for availability and up-to-dateness.
+    description: "Number of mirrors to check for availability and up-to-dateness."
     default: "20"
   speedtests:
-    description: Maximum number of healthy mirrors to test for speed.
+    description: "Maximum number of healthy mirrors to test for speed."
     default: "10"
   parallel:
-    description: Number of parallel speed tests.
+    description: "Number of parallel speed tests."
     default: "2"
   sample-size:
-    description: Number of kilobytes to download from each mirror during the speed test.
+    description: "Number of kilobytes to download from each mirror during the speed test."
     default: "1024"
   sample-time:
-    description: Maximum number of seconds within which the sample download must finish.
+    description: "Maximum number of seconds within which the sample download must finish."
     default: "3"
   exclude-current:
-    description: Don't include the current APT mirror in the speed tests.
+    description: "Don't include the current APT mirror in the speed tests."
     default: "false"
   country:
-    description: Country code to use for selecting mirrors (Ubuntu only).
+    description: "Country code to use for selecting mirrors (Ubuntu only)."
     default: ""
 
 runs:
   using: composite
   steps:
     - name: Configure fast APT mirror
-      shell: bash
       env:
         INPUT_REF: ${{ inputs.ref }}
         INPUT_HEALTHCHECKS: ${{ inputs.healthchecks }}
@@ -41,6 +41,7 @@ runs:
         INPUT_SAMPLE_TIME: ${{ inputs.sample-time }}
         INPUT_COUNTRY: ${{ inputs.country }}
         INPUT_EXCLUDE_CURRENT: ${{ inputs.exclude-current }}
+      shell: bash
       run: |
         set -euo pipefail
         echo "::group::Configure fast APT mirror"

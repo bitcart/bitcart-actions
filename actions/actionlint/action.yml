@@ -1,0 +1,66 @@
+name: Lint Workflows
+
+description: "Lint GitHub and Forgejo workflows with actionlint, and composite actions with shellcheck"
+
+runs:
+  using: composite
+  steps:
+    - name: Install actionlint and shellcheck
+      env:
+        # renovate: datasource=github-releases depName=rhysd/actionlint extractVersion=^v(?<version>.+)$
+        ACTIONLINT_VERSION: "1.7.12"
+        ACTIONLINT_SHA256_X86_64: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        ACTIONLINT_SHA256_AARCH64: 325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6
+        # renovate: datasource=github-releases depName=koalaman/shellcheck extractVersion=^v(?<version>.+)$
+        SHELLCHECK_VERSION: "0.11.0"
+        SHELLCHECK_SHA256_X86_64: b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6
+        SHELLCHECK_SHA256_AARCH64: 68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc
+      shell: bash
+      run: |
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64) goarch=amd64 actionlint_sha256=$ACTIONLINT_SHA256_X86_64 shellcheck_sha256=$SHELLCHECK_SHA256_X86_64 ;;
+          aarch64) goarch=arm64 actionlint_sha256=$ACTIONLINT_SHA256_AARCH64 shellcheck_sha256=$SHELLCHECK_SHA256_AARCH64 ;;
+          *)
+            echo "::error::Unsupported architecture: $arch"
+            exit 1
+            ;;
+        esac
+        bin="${RUNNER_TEMP:-/tmp}/actionlint"
+        mkdir -p "$bin"
+        cd "$bin"
+        actionlint="actionlint_${ACTIONLINT_VERSION}_linux_$goarch.tar.gz"
+        curl -fsSLO "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/$actionlint"
+        echo "$actionlint_sha256  $actionlint" | sha256sum -c -
+        tar -xzf "$actionlint" actionlint
+        shellcheck="shellcheck-v$SHELLCHECK_VERSION.linux.$arch.tar.gz"
+        curl -fsSLO "https://github.com/koalaman/shellcheck/releases/download/v$SHELLCHECK_VERSION/$shellcheck"
+        echo "$shellcheck_sha256  $shellcheck" | sha256sum -c -
+        tar -xzf "$shellcheck" --strip-components=1 "shellcheck-v$SHELLCHECK_VERSION/shellcheck"
+
+    - name: Run actionlint
+      env:
+        CONFIG: ${{ github.action_path }}/actionlint.yaml
+      shell: bash
+      run: |
+        bin="${RUNNER_TEMP:-/tmp}/actionlint"
+        shopt -s nullglob
+        files=(.github/workflows/*.yml .github/workflows/*.yaml .forgejo/workflows/*.yml .forgejo/workflows/*.yaml)
+        if ((${#files[@]} == 0)); then
+          echo "No workflow files to lint"
+          exit 0
+        fi
+        "$bin/actionlint" -config-file "$CONFIG" -shellcheck "$bin/shellcheck" -pyflakes= "${files[@]}"
+
+    - name: Set up Python
+      if: ${{ !cancelled() }}
+      uses: bitcart/bitcart-actions/actions/setup-python@master
+      with:
+        enable-cache: "false"
+
+    - name: Run shellcheck on composite actions
+      if: ${{ !cancelled() }}
+      env:
+        TOOL_PATH: ${{ github.action_path }}/../..
+      shell: bash
+      run: uvx --from "$TOOL_PATH" action-shellcheck --shellcheck "${RUNNER_TEMP:-/tmp}/actionlint/shellcheck"

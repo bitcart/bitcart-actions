@@ -63,6 +63,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   run:
     name: ${{ matrix.python-version }}
@@ -73,6 +77,7 @@ jobs:
       id-token: write # OIDC token for codecov uploads
 
     strategy:
+      fail-fast: false
       matrix:
         python-version: ${{ fromJSON(inputs.python-versions) }}
 
@@ -192,4 +197,4 @@ jobs:
         if: ${{ !cancelled() }}
         uses: bitcart/bitcart-actions/actions/upload-test-results@master
         with:
-          suffix: ${{ inputs.coverage-flag }}-py${{ env.PYTHON }}
+          suffix: ${{ inputs.coverage-flag }}-py${{ env.PYTHON }}-${{ inputs.runs-on }}

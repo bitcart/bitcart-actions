@@ -1,4 +1,4 @@
-name: "Validate Bitcart Plugins"
+name: Validate Bitcart Plugins
 
 description: "Validate Bitcart plugins in a directory"
 
@@ -12,9 +12,9 @@ runs:
   using: composite
   steps:
     - name: Validate plugins
-      shell: bash
       env:
         DIRECTORY: ${{ inputs.directory }}
+      shell: bash
       run: |
         if [ -f "${DIRECTORY}/manifest.json" ]; then
           bitcart-cli plugin validate "${DIRECTORY}"

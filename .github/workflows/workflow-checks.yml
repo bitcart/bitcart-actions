@@ -36,6 +36,10 @@ jobs:
       contents: read
       security-events: write # needed for github advanced security
 
+    env:
+      # renovate: datasource=pypi depName=zizmor
+      ZIZMOR_VERSION: "1.31.1"
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -48,7 +52,23 @@ jobs:
           inputs: ${{ inputs.zizmor-paths }}
           advanced-security: ${{ inputs.zizmor-advanced-security }}
           persona: ${{ inputs.zizmor-persona }}
+          version: ${{ env.ZIZMOR_VERSION }}
+
+      - name: Fail on zizmor findings
+        if: ${{ inputs.zizmor && inputs.zizmor-advanced-security }}
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          inputs: ${{ inputs.zizmor-paths }}
+          advanced-security: false
+          annotations: true
+          persona: ${{ inputs.zizmor-persona }}
+          version: ${{ env.ZIZMOR_VERSION }}
 
       - name: Check workflow layout
         if: ${{ !cancelled() }}
         uses: bitcart/bitcart-actions/actions/workflow-layout@master
+
+      - name: Lint workflows
+        if: ${{ !cancelled() }}
+        uses: bitcart/bitcart-actions/actions/actionlint@master
+        timeout-minutes: 10

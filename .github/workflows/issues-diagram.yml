@@ -10,6 +10,10 @@ on:
 
 permissions: {}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   run:
     name: run
@@ -35,7 +39,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -69,7 +72,6 @@ jobs:
           FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SERVER_URL: ${{ github.server_url }}
           REPO: ${{ github.repository }}
-        shell: bash
         run: |
           set -euo pipefail
 

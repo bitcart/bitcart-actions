@@ -3,20 +3,22 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "workflow-layout"
+name = "bitcart-actions"
 version = "1.0.0"
-description = "Enforce the Bitcart key order, blank-line layout and permission comments in GitHub and Forgejo workflow files"
+description = "Tools behind the Bitcart shared workflows: workflow and composite action conventions, and uv.lock diffs"
 requires-python = ">=3.12"
 dependencies = ["pyyaml>=6.0"]
 
 [project.scripts]
 workflow-layout = "workflow_layout:main"
+action-shellcheck = "workflow_layout:shellcheck_main"
+uv-lock-diff = "uv_lock_diff:main"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/workflow_layout.py"]
+include = ["src/workflow_layout.py", "src/uv_lock_diff.py"]
 
 [tool.hatch.build.targets.wheel]
-only-include = ["src/workflow_layout.py"]
+only-include = ["src/workflow_layout.py", "src/uv_lock_diff.py"]
 sources = { "src" = "" }
 
 [tool.uv]

@@ -1,4 +1,4 @@
-name: "Install bitcoind"
+name: Install Bitcoin Core
 
 description: "Install bitcoind and bitcoin-cli from a pinned Bitcoin Core release, verified against its SHA256 checksum"
 
@@ -6,11 +6,11 @@ runs:
   using: composite
   steps:
     - name: Install bitcoind
-      shell: bash
       env:
         BITCOIN_VERSION: "32.1"
         SHA256_X86_64: 61545c17c3120fb7412f896d248b11993af04ec8817aad3649c55b2afb044963
         SHA256_AARCH64: 7ed37c7373eb6aa3e3f72842596a1afeba1b223717033cade9842b25773e1922
+      shell: bash
       run: |
         arch=$(uname -m)
         case "$arch" in

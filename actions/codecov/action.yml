@@ -1,4 +1,4 @@
-name: "Upload Codecov Coverage"
+name: Upload Codecov Coverage
 
 description: "Upload coverage report to Codecov"
 

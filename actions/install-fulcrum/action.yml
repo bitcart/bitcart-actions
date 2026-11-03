@@ -1,18 +1,29 @@
-name: "Install Fulcrum"
+name: Install Fulcrum
 
-description: "Install the latest Fulcrum Bitcoin indexer"
+description: "Install the Fulcrum Bitcoin indexer"
 
 runs:
   using: composite
   steps:
     - name: Install Fulcrum
+      env:
+        # renovate: datasource=github-releases depName=cculianu/Fulcrum
+        FULCRUM_VERSION: "v2.1.4"
+        SHA256_X86_64: faf7cb36266c1694c834ad551d9592c0aef357bca66fdb5efdfe0d131c4b38ae
+        SHA256_ARM64: bc9cda576bf889222e89c7616012e628597e4921f9116eebc759dfc854785b84
       shell: bash
       run: |
-        FULCRUM_VERSION=$(curl --silent https://api.github.com/repos/cculianu/Fulcrum/releases/latest | jq -r .tag_name | tr -d v)
-        ARCHIVE_NAME=Fulcrum-${FULCRUM_VERSION}-$(uname -m)-linux.tar.gz
-        wget https://github.com/cculianu/Fulcrum/releases/download/v${FULCRUM_VERSION}/${ARCHIVE_NAME}
-        mkdir -p Fulcrum
-        tar -xvzf ${ARCHIVE_NAME} -C Fulcrum
-        sudo cp Fulcrum/${ARCHIVE_NAME/.tar.gz/}/Fulcrum /usr/local/bin/Fulcrum
-        sudo chmod +x /usr/local/bin/Fulcrum
-        rm -rf ${ARCHIVE_NAME} Fulcrum
+        case "$(uname -m)" in
+          x86_64) arch=x86_64 sha256=$SHA256_X86_64 ;;
+          aarch64) arch=arm64 sha256=$SHA256_ARM64 ;;
+          *)
+            echo "::error::Unsupported architecture: $(uname -m)"
+            exit 1
+            ;;
+        esac
+        name="Fulcrum-${FULCRUM_VERSION#v}-$arch-linux"
+        cd "$RUNNER_TEMP"
+        curl -fsSLO "https://github.com/cculianu/Fulcrum/releases/download/$FULCRUM_VERSION/$name.tar.gz"
+        echo "$sha256  $name.tar.gz" | sha256sum -c -
+        tar -xzf "$name.tar.gz"
+        sudo install -m 0755 "$name/Fulcrum" /usr/local/bin/Fulcrum

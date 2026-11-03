@@ -33,12 +33,12 @@ on:
         description: "Pass -v to prek run for verbose output"
         type: boolean
         default: false
-      turbo-cache:
-        description: "Cache for Turbo build system"
-        type: boolean
-        default: false
       nx-cache:
         description: "Cache for Nx build system"
+        type: boolean
+        default: false
+      setup-just:
+        description: "Whether to install the just command runner"
         type: boolean
         default: false
       runs-on:
@@ -48,6 +48,10 @@ on:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   run:
@@ -65,19 +69,13 @@ jobs:
         with:
           package-manager: ${{ inputs.node-package-manager }}
 
-      - name: Cache for Turbo
-        if: inputs.turbo-cache
-        uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
-
-      - name: Restore Nx cache
-        id: nx-cache-restore
+      - name: Cache Nx
         if: inputs.nx-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .nx
-          key: v1-nx-${{ github.ref_name }}-${{ hashFiles('nx.json') }}
-          restore-keys: |
-            v1-nx-${{ github.ref_name }}-
+        uses: bitcart/bitcart-actions/actions/nx-cache@master
+
+      - name: Set up Just
+        if: inputs.setup-just
+        uses: bitcart/bitcart-actions/actions/setup-just@master
 
       - name: Set up Python
         uses: bitcart/bitcart-actions/actions/setup-python@master
@@ -86,8 +84,15 @@ jobs:
 
       - name: Install dependencies
         env:
-          INSTALL_DEPENDENCIES: ${{ inputs.install-dependencies || 'uv pip install prek' }}
-        run: bash -e -o pipefail <<< "$INSTALL_DEPENDENCIES"
+          INSTALL_DEPENDENCIES: ${{ inputs.install-dependencies }}
+          # renovate: datasource=pypi depName=prek
+          PREK_VERSION: "0.5.7"
+        run: |
+          if [[ -n $INSTALL_DEPENDENCIES ]]; then
+            bash -e -o pipefail <<< "$INSTALL_DEPENDENCIES"
+          else
+            uv pip install "prek==$PREK_VERSION"
+          fi
 
       - name: Extra checks
         if: inputs.extra-checks != ''
@@ -107,6 +112,7 @@ jobs:
       - name: Run prek checks
         env:
           VERBOSE: ${{ inputs.verbose }}
+          SKIP: zizmor
         run: |
           args=()
           if [[ $VERBOSE == true ]]; then
@@ -117,10 +123,3 @@ jobs:
       - name: Prune prek cache
         run: |
           prek cache gc -v || echo "Failed to prune prek cache"
-
-      - name: Save Nx cache
-        if: always() && inputs.nx-cache
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .nx
-          key: ${{ steps.nx-cache-restore.outputs.cache-primary-key }}

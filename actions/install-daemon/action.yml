@@ -1,4 +1,5 @@
-name: "Install Daemon"
+name: Install Daemon
+
 description: "Install Bitcart daemon with its dependencies"
 
 inputs:
@@ -29,9 +30,9 @@ runs:
 
     - name: Move daemon to target directory
       if: inputs.daemon-repository != ''
-      shell: bash
       env:
         DAEMON_DIR: ${{ inputs.daemon-dir }}
+      shell: bash
       run: mv __daemon "$DAEMON_DIR"
 
     - name: Install system dependencies
@@ -42,7 +43,7 @@ runs:
 
     - name: Install daemon dependencies
       if: inputs.install-dependencies != ''
-      shell: bash
       env:
         INSTALL_DEPENDENCIES: ${{ inputs.install-dependencies }}
+      shell: bash
       run: bash -e -o pipefail <<< "$INSTALL_DEPENDENCIES"
