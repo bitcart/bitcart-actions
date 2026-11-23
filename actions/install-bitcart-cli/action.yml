@@ -8,7 +8,7 @@ runs:
     - name: Install bitcart-cli
       env:
         # renovate: datasource=github-releases depName=bitcart/bitcart-cli
-        BITCART_CLI_VERSION: "1.8.0"
+        BITCART_CLI_VERSION: "1.9.2"
         SHA256_X86_64: 98e8e815c8735faff997ff54e32b3a32ec90987dbe926c82f05dd1ac1e88fcf5
         SHA256_AARCH64: 792d3ffa67755d687d3d079ef4a7b41309eb8422988085441a385f5aea55617d
       shell: bash
